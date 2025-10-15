@@ -32,7 +32,6 @@ const HomePage = () => {
   }else{
     return (
       <>
-        <Button onClick={()=>{console.log(process.env.NEXT_PUBLIC_BACKEND_URL);}}>test</Button>
         <HeroSection setAnalysing={setAnalysing}/>
         <ValuePropositionSection />
         <BenefitsSection />
