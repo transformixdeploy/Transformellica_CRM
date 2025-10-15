@@ -1,0 +1,14 @@
+# backend directory
+/backend_node/.env
+/backend_node/node_modules
+/backend_node/.gitignore
+
+# frontend directory
+/frontend-next/.next/
+/frontend-next/node_modules
+/frontend-next/.env
+/frontend-next/README.md
+
+# current directory
+.env
+transformellica_crm.code-workspace
