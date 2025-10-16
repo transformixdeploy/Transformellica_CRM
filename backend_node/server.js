@@ -18,7 +18,11 @@ cloudinary.config({
 const app = express();
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL, 
+  origin: [
+    "http://92.113.25.126:8080",
+    "http://app.thetransformix.com",
+    "https://app.thetransformix.com",
+  ], 
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]
