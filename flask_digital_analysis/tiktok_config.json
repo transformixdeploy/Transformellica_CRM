@@ -1,0 +1,8 @@
+{
+    "cookies": [
+      { "name": "sessionid", "value": "020e1175d8a414a8cd8c8de502e2645a", "domain": ".tiktok.com", "path": "/" },
+      { "name": "tt_csrf_token", "value": "LQU3teps-kcQn5BxlUWt2kfdpQI_Qc9ury7s", "domain": ".tiktok.com", "path": "/" },
+      { "name": "msToken", "value": "9iyLFu9QeJfSiuqG-zOHNeWxgWRBCj9zOxL3DY50i8PoWbwsRreGqGvvwINhuAffbiRvIP69pXuORdc-f-7HQImZb5_ZLkvlwbJVsLI_SXjy1T9lLemimeetgNttsJzYvsdcO-8Zt6-MIjwT5NpRY3sBqK8=", "domain": ".tiktok.com", "path": "/" },
+      { "name": "s_v_web_id", "value": "verify_mgqcouhm_DvLyQOOY_kMkA_4CwE_BJ8D_QQ3O0XuEvRm3", "domain": ".tiktok.com", "path": "/" }
+    ]
+  }

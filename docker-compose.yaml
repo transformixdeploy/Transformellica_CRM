@@ -16,12 +16,13 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_USERNAME=${DB_USERNAME}
       - FRONTEND_URLS=${FRONTEND_URLS}
+      - AI_SERVICE_CRM_URL=${AI_SERVICE_CRM_URL}
+      - AI_SERVICE_TRANSFORMELLICA_URL=${AI_SERVICE_TRANSFORMELLICA_URL}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
       - DATABASE_URL=${DATABASE_URL}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - AI_SERVICE_CRM_URL=${AI_SERVICE_CRM_URL}
     ports:
       - "${EXPRESS_PORT}:${EXPRESS_PORT}"
     depends_on:
@@ -41,6 +42,40 @@ services:
       - "${FRONTEND_PORT}:${FRONTEND_PORT}"
     depends_on:
       - node_backend
+    restart: unless-stopped
+
+  flask_crm:
+    build:
+      context: ./flask_crm
+      dockerfile: ./Dockerfile
+      args:
+        - PORT=${FLASK_CRM_PORT}
+    container_name: flask_crm
+    environment:
+      - PORT=${FLASK_CRM_PORT}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - APP_ENV=${APP_ENV}
+      - DEBUG=${DEBUG}
+    ports:
+      - "${FLASK_CRM_PORT}:${FLASK_CRM_PORT}"
+    restart: unless-stopped
+  
+  flask_digital_analysis:
+    build:
+      context: ./flask_digital_analysis
+      dockerfile: ./Dockerfile
+      args:
+        - PORT=${FLASK_DIGITAL_ANALYSIS_PORT}
+    container_name: flask_digital_analysis
+    environment:
+      - PORT=${FLASK_DIGITAL_ANALYSIS_PORT}
+      - GOOGLE_AI_API_KEY=${GOOGLE_AI_API_KEY}
+      - GOOGLE_PAGESPEED_API_KEY=${GOOGLE_PAGESPEED_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - APP_ENV=${APP_ENV}
+      - DEBUG=${DEBUG}
+    ports:
+      - "${FLASK_DIGITAL_ANALYSIS_PORT}:${FLASK_DIGITAL_ANALYSIS_PORT}"
     restart: unless-stopped
   
   nginx:
