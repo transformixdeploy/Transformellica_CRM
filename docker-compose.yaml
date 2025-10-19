@@ -77,6 +77,8 @@ services:
     ports:
       - "${FLASK_DIGITAL_ANALYSIS_PORT}:${FLASK_DIGITAL_ANALYSIS_PORT}"
     restart: unless-stopped
+    volumes:
+      - wdm_cache:/app/.wdm
   
   nginx:
     image: nginx:alpine
@@ -138,3 +140,4 @@ volumes:
   webroot:
   certbot-etc:
   certbot-var:
+  wdm_cache: 
