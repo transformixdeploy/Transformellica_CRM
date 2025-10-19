@@ -18,4 +18,4 @@ EXPOSE ${PORT}
 
 # Command to run your Flask application using Gunicorn (recommended for production)
 # note about (app:app) the flask app file should be named app.py as we will use it as entry point
-CMD gunicorn -w 4 -b 0.0.0.0:${PORT} app:app
+CMD gunicorn -w 4 -b 0.0.0.0:${PORT} --timeout 0 app:app
