@@ -12,6 +12,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from webdriver_manager.chrome import ChromeDriverManager
 import time
 import os
 
@@ -20,8 +21,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 class CompetitorSearchService:
     
     def __init__(self):
-        self.webdriver_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chromedriver.exe")
-        
+        pass        
     def setup_browser(self):
         try:
             options = Options()
@@ -37,7 +37,7 @@ class CompetitorSearchService:
             
             try:
                 from selenium.webdriver.chrome.service import Service
-                service = Service(executable_path="chromedriver.exe")
+                service = Service(ChromeDriverManager().install())
                 driver = webdriver.Chrome(service=service, options=options)
                 driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
                 driver.implicitly_wait(10)

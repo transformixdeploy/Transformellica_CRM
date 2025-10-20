@@ -8,6 +8,7 @@ from selenium.webdriver import ActionChains
 from selenium.webdriver.common.actions.wheel_input import ScrollOrigin
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
 from typing import Dict, List, Optional, Any, Union
 import os
 os.environ.setdefault("TRANSFORMERS_NO_TF", "1")
@@ -70,16 +71,9 @@ class SentimentAnalyzer:
         
         edge_options.add_argument("--window-size=1920,1080")
         
-        try:
-            driver_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chromedriver.exe")
-            
-            if os.path.exists(driver_path):
-                service = Service(executable_path=driver_path)
-                return webdriver.Chrome(service=service, options=edge_options)
-            else:
-                logging.warning(f"Local driver not found at {driver_path}, trying system Chrome driver...")
-                return webdriver.Chrome(options=edge_options)
-                
+        try:            
+            service = Service(ChromeDriverManager().install())
+            return webdriver.Chrome(service=service, options=edge_options)            
         except Exception as e:
             logging.error(f"Error with local driver: {e}")
             logging.info("Falling back to system Chrome driver...")
