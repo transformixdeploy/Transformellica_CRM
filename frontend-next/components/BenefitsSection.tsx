@@ -100,8 +100,8 @@ const BenefitsSection = () => {
               <Card className="bg-muted/30 hover:shadow-xl hover:border-primary/50 transition-all duration-300 h-full flex flex-col backdrop-blur-sm border border-border/50 p-6 rounded-xl">
                 
                 {/* card header */}
-                <CardHeader className="p-0 mb-4 flex flex-row items-start space-x-4">
-                  {benefit.icon}
+                <CardHeader className="p-0 mb-4 flex flex-row items-center space-x-4">
+                  <span>{benefit.icon}</span>
                   <CardTitle className="text-xl font-semibold mt-1">{benefit.title}</CardTitle>
                 </CardHeader>
 

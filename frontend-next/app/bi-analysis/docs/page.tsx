@@ -11,7 +11,7 @@ const DocsPage = () => {
           <CardDescription className="font-medium text-sm">Welcome to our documentation page. Here you can find all useful resources you need.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <div className="flex items-center gap-2">
+          <div className="max-sm:flex-col flex items-center gap-2">
             <h4 className="font-medium text-sm text-popover-foreground">CSV Template : </h4>
             <Link href={"https://res.cloudinary.com/dj3f7lzmd/raw/upload/v1758477226/crm_template_eshj2w.csv"} className="text-blue-500 hover:underline">Download Template</Link>
           </div>

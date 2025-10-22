@@ -2239,12 +2239,12 @@ def build_dashboard_charts(df, schema_analysis):
                 pass
 
         charts = {
-            "barChart": "true" if bar_enabled else "false",
+            "barChart": True if bar_enabled else False,
             "barChartData": {
                 "title": bar_title,
                 "data": bar_data if bar_data else []
             },
-            "pieChart": "true" if pie_enabled else "false",
+            "pieChart": True if pie_enabled else False,
             "pieChartData": {
                 "title": pie_title,
                 "colorCodes": palette[:max(1, len(pie_data))] if pie_data else [],

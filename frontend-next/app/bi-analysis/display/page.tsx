@@ -263,14 +263,14 @@ export default function Home() {
         <div className="mx-auto max-w-7xl space-y-8"> 
           
           {/* header */}
-          <div className="flex items-center justify-between">
+          <div className="max-sm:flex-col max-sm:text-center flex items-center justify-between">
             <div>
               <h1 className="font-heading text-4xl font-bold text-foreground">Display Page</h1>
               <p className="text-lg text-muted-foreground mt-2">
                 Upload and explore your CSV data with powerful analytics
               </p>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="max-sm:mt-3 flex items-center space-x-3">
               <div className="rounded-lg flex items-center justify-center">
                 <Button disabled={deletingData || isUploading || isChecking} onClick={deleteData} className="bg-destructive hover:bg-destructive/90 hover:cursor-pointer">
                   {deletingData ? "Deleting..." : "Delete Data"}
@@ -372,12 +372,12 @@ export default function Home() {
   
           
   
-          {/* 4 cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-            <Card className="bg-card/70 backdrop-blur-sm border-border hover:shadow-lg transition-all duration-300">
+          {/* cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card className="bg-card/70 backdrop-blur-sm border-border hover:shadow-lg transition-all duration-300 flex justify-center">
               <CardContent className="px-6 py-6">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
+                  <div className="min-w-10 min-h-10 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
                     <Icon icon="material-symbols:domain" className="w-5 h-5 text-primary-foreground" />
                   </div>
                   <div>
@@ -387,10 +387,10 @@ export default function Home() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-card/70 backdrop-blur-sm border-border hover:shadow-lg transition-all duration-300">
+            <Card className="bg-card/70 backdrop-blur-sm border-border hover:shadow-lg transition-all duration-300 flex justify-center">
               <CardContent className="px-6 py-6">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-secondary to-accent rounded-lg flex items-center justify-center">
+                  <div className="min-w-10 min-h-10 bg-gradient-to-br from-secondary to-accent rounded-lg flex items-center justify-center">
                     <Icon icon="material-symbols:table-rows" className="w-5 h-5 text-primary-foreground" />
                   </div>
                   <div>
@@ -400,10 +400,10 @@ export default function Home() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-card/70 backdrop-blur-sm border-border hover:shadow-lg transition-all duration-300">
+            <Card className="bg-card/70 backdrop-blur-sm border-border hover:shadow-lg transition-all duration-300 flex justify-center">
               <CardContent className="px-6 py-6">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-accent to-secondary rounded-lg flex items-center justify-center">
+                  <div className="min-w-10 min-h-10 bg-gradient-to-br from-accent to-secondary rounded-lg flex items-center justify-center">
                     <Icon icon="material-symbols:view-column" className="w-5 h-5 text-primary-foreground" />
                   </div>
                   <div>
@@ -413,10 +413,10 @@ export default function Home() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-card/70 backdrop-blur-sm border-border hover:shadow-lg transition-all duration-300">
+            <Card className="bg-card/70 backdrop-blur-sm border-border hover:shadow-lg transition-all duration-300 flex justify-center">
               <CardContent className="px-6 py-6">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-destructive to-destructive/80 rounded-lg flex items-center justify-center">
+                  <div className="min-w-10 min-h-10 bg-gradient-to-br from-destructive to-destructive/80 rounded-lg flex items-center justify-center">
                     <Icon icon="material-symbols:warning" className="w-5 h-5 text-primary-foreground" />
                   </div>
                   <div>
@@ -426,10 +426,10 @@ export default function Home() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-card/70 backdrop-blur-sm border-border hover:shadow-lg transition-all duration-300">
+            <Card className="bg-card/70 backdrop-blur-sm border-border hover:shadow-lg transition-all duration-300 flex justify-center">
               <CardContent className="px-6 py-6">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
+                  <div className="min-w-10 min-h-10 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
                     <Icon icon="material-symbols:numbers" className="w-5 h-5 text-primary-foreground" />
                   </div>
                   <div>

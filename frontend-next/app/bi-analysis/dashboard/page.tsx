@@ -118,9 +118,17 @@ function DashboardPage() {
   
                 {/* quick stats */}
                 <div>
-                  <div className="flex flex-row w-full">
+                  <div className="max-sm:flex-col max-sm:text-center flex flex-row w-full">
+                    
+                    <div className="sm:hidden mb-6">
+                      <Button onClick={reCalculateInsights} className="cursor-pointer w-[200px] bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-primary-foreground font-medium py-3">
+                        <Icon icon="lucide:refresh-ccw" className="w-4 h-4 mr-2 text-primary-foreground" /> Recalculate Insights
+                      </Button>
+                    </div>
+                    
                     <h2 className="text-2xl font-heading font-bold text-foreground mb-6">Quick Stats</h2>
-                    <div className="ml-auto mb-6">
+                    
+                    <div className="max-sm:hidden ml-auto mb-6">
                       <Button onClick={reCalculateInsights} className="cursor-pointer w-[200px] bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-primary-foreground font-medium py-3">
                         <Icon icon="lucide:refresh-ccw" className="w-4 h-4 mr-2 text-primary-foreground" /> Recalculate Insights
                       </Button>
@@ -132,12 +140,10 @@ function DashboardPage() {
                       
                       {/* stat */}
                       {data.keyBusinessInsights.quickStats.map((feature,index)=>(
-                          <li key={index} className="flex items-center space-x-3">
-                              <div className="justify-between items-start py-2 border-b border-muted/30">
-                                  <span className="text-lg font-bold mr-2 text-primary">{feature.key}:</span>
-                                  <span className="font-bold text-accent">{feature.value}</span>
-                              </div>
-                          </li>
+                          <div key={index} className="max-sm:flex-col flex items-center py-2 border-b border-muted/30">
+                              <span className="text-lg font-bold mr-2 text-primary">{feature.key}:</span>
+                              <span className="font-bold text-accent">{feature.value}</span>
+                          </div>
                       ))}
                     
                     </ul>
@@ -149,7 +155,7 @@ function DashboardPage() {
               {/* Charts  */}
               {(data.barChart || data.lineChart || data.pieChart || data.donutChart) && <div className="mb-8">
                 <h2 className="text-2xl font-heading font-bold text-foreground mb-6">Charts</h2>
-                <div className="grid grid-cols-2 gap-5">
+                <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-5">
   
                 {/* pie chart */}
                 {data.pieChart && <div className="flex flex-col border border-border rounded-lg shadow-md hover:-translate-y-1 duration-300 hover:shadow-xl bg-card">
@@ -203,8 +209,7 @@ function DashboardPage() {
                         data={data.barChartData.data}
                         margin={{
                           top: 5,
-                          right: 30,
-                          left: 20,
+                          right: 40,
                           bottom: 5,
                         }}
                       >

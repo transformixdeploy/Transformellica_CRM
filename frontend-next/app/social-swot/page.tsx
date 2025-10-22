@@ -95,7 +95,7 @@ const SocialSWOT = () => {
               <p><span className="font-semibold text-gray-300">Bio:</span> {data.profileInfo.basicInfo.bio}</p>
               <p className={`${data.profileInfo.basicInfo.verified ? "text-green-500" : "text-red-500"} font-bold`}><span className="font-semibold text-gray-300">Verified:</span> {data.profileInfo.basicInfo.verified ? 'Yes' : 'No'}</p>
               <p className={`${data.profileInfo.basicInfo.private ? "text-green-500" : "text-red-500"} font-bold`}><span className="font-semibold text-gray-300">Private:</span> {data.profileInfo.basicInfo.private ? 'Yes' : 'No'}</p>
-              <p><span className="font-semibold text-gray-300">Website:</span> <Link href={data.profileInfo.basicInfo.website} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{data.profileInfo.basicInfo.website}</Link></p>
+              <p><span className="font-semibold text-gray-300">Website:</span> <Link href={data.profileInfo.basicInfo.website} target="_blank" rel="noopener noreferrer" className="text-blue-400 break-words hover:underline">{data.profileInfo.basicInfo.website}</Link></p>
             </div>
           </div>
   
@@ -103,12 +103,12 @@ const SocialSWOT = () => {
           <div className="bg-gray-800 rounded-lg shadow-xl p-8 border border-gray-700">
             <h2 className="text-3xl font-bold text-white mb-6 text-center">Additional Metrics</h2>
             <div className="space-y-6">
-              <div className="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg border border-gray-600">
+              <div className="max-sm:flex-col max-sm:gap-3 flex items-center justify-between p-4 bg-gray-700/50 rounded-lg border border-gray-600">
                 <span className="font-semibold text-gray-300 text-lg">Posts Count:</span>
                 <span className="text-xl font-bold text-blue-400">{data.profileInfo.additionalMetrics.postsCount}</span>
               </div>
               
-              <div className="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg border border-gray-600">
+              <div className="max-sm:flex-col max-sm:gap-3 flex items-center justify-between p-4 bg-gray-700/50 rounded-lg border border-gray-600">
                 <span className="font-semibold text-gray-300 text-lg">Average Likes:</span>
                 <div className="flex items-center gap-3">
                   <span className="text-xl font-bold text-pink-400">{data.profileInfo.additionalMetrics.averageLikes.toFixed(2)}</span>
@@ -118,7 +118,7 @@ const SocialSWOT = () => {
                 </div>
               </div>
               
-              <div className="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg border border-gray-600">
+              <div className="max-sm:flex-col max-sm:gap-3 flex items-center justify-between p-4 bg-gray-700/50 rounded-lg border border-gray-600">
                 <span className="font-semibold text-gray-300 text-lg">Average Comments:</span>
                 <div className="flex items-center gap-3">
                   <span className="text-xl font-bold text-blue-400">{data.profileInfo.additionalMetrics.averageComments.toFixed(2)}</span>
@@ -128,7 +128,7 @@ const SocialSWOT = () => {
                 </div>
               </div>
               
-              <div className="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg border border-gray-600">
+              <div className="max-sm:flex-col max-sm:gap-3 flex text-center items-center justify-between p-4 bg-gray-700/50 rounded-lg border border-gray-600">
                 <span className="font-semibold text-gray-300 text-lg">Average Engagement Per Post:</span>
                 <div className="flex items-center gap-3">
                   <span className="text-xl font-bold text-green-400">{data.profileInfo.additionalMetrics.EngagementPerPost.toFixed(2)}</span>
@@ -164,10 +164,17 @@ const SocialSWOT = () => {
         </section>
   
         {/* Full Social Analysis */}
-        <section className="mb-12">
+        <section className="mb-12 ">
           <h2 className="text-4xl font-bold text-white mb-8 text-center">Full Social Analysis</h2>
           <div className="bg-gray-800 rounded-lg shadow-xl p-8 border border-gray-700">
-            <div className="prose prose-invert text-gray-300 leading-relaxed">
+            {/* <div className="break-words prose prose-invert text-gray-300 leading-relaxed"> */}
+            <div className="prose prose-invert break-words max-w-none text-gray-300 leading-relaxed
+                [&_pre]:whitespace-pre-wrap
+                [&_pre]:break-words
+                [&_pre]:bg-gray-800
+                [&_pre]:rounded-xl
+                [&_pre]:p-4
+                [&_code]:break-words">
               <ReactMarkdown>
                 {data.fullSocialAnalysis}
               </ReactMarkdown>

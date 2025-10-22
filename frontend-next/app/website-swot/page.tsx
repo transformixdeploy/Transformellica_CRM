@@ -104,7 +104,13 @@ const WebsiteSWOT = () => {
                 <CardHeader>
                   <CardTitle className="text-3xl font-bold text-white mb-4 text-center">Full Website Analysis</CardTitle>
                 </CardHeader>
-                <CardContent className="text-gray-300">
+                <CardContent className="prose prose-invert break-words max-w-none text-gray-300 leading-relaxed
+                    [&_pre]:whitespace-pre-wrap
+                    [&_pre]:break-words
+                    [&_pre]:bg-gray-800
+                    [&_pre]:rounded-xl
+                    [&_pre]:p-4
+                    [&_code]:break-words">
                   <ReactMarkdown>{data.fullSocialAnalysis}</ReactMarkdown>
                 </CardContent>
               </Card>
@@ -122,7 +128,7 @@ const WebsiteSWOT = () => {
                   <p className='text-xl'><span className="font-semibold text-gray-300">Meta Description:</span> <span className="text-blue-400">{data.pageInfo.metaDescription}</span> ({data.pageInfo.metaDescriptionLength} chars)</p>
                   <p className='text-xl'><span className="font-semibold text-gray-300">HTTPS:</span> <span className={`${data.pageInfo.https ? "text-green-500" : "text-red-500"} font-bold`}>{data.pageInfo.https ? 'Yes' : 'No'}</span></p>
                   <span className='me-2 font-semibold text-gray-300 text-xl'>Canonical URL:</span>
-                  <Link href={data.pageInfo.canonicalUrl} className='text-secondary hover:underline text-xl'>{data.pageInfo.canonicalUrl}</Link>
+                  <Link href={data.pageInfo.canonicalUrl} className='text-secondary hover:underline break-words text-xl'>{data.pageInfo.canonicalUrl}</Link>
                 </CardContent>
               </Card>
             </div>
@@ -138,7 +144,7 @@ const WebsiteSWOT = () => {
                   <p className='text-xl'><span className="font-semibold text-gray-300">Description:</span> <span className="text-blue-400">{data.openGraphTags.description}</span></p>
                   <p className='text-xl'><span className="font-semibold text-gray-300">Type:</span> <span className="text-blue-400">{data.openGraphTags.type}</span></p>
                   <p className='text-xl'><span className="font-semibold text-gray-300">Site Name:</span> <span className="text-blue-400">{data.openGraphTags.siteName}</span></p>
-                  <span className="font-semibold text-gray-300 text-xl">URL:</span> <Link href={data.openGraphTags.url} className="text-secondary hover:underline text-xl">{data.openGraphTags.url}</Link>
+                  <span className="font-semibold text-gray-300 text-xl ">URL:</span> <Link href={data.openGraphTags.url} className="text-secondary hover:underline text-xl break-words">{data.openGraphTags.url}</Link>
                 </CardContent>
               </Card>
             </div>

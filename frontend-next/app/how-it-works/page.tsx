@@ -47,7 +47,9 @@ const HowItWorksPage = () => {
             <motion.div key={index} variants={itemAnimationVariants}>
               <Card className="bg-muted/50 h-full flex flex-col shadow-lg hover:shadow-primary/20 transition-shadow duration-300 border border-border/50 backdrop-blur-sm">
                 <CardHeader className="flex flex-row items-center space-x-4 pb-4">
-                  <step.icon className={`h-10 w-10 ${index % 2 == 0 ? "text-primary" : "text-secondary"} `} />
+                  <span>
+                    <step.icon className={`h-10 w-10 ${index % 2 == 0 ? "text-primary" : "text-secondary"} `} />
+                  </span>
                   <CardTitle className="text-xl">{step.title}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-grow">

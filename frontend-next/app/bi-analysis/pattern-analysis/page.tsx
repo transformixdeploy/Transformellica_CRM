@@ -256,11 +256,12 @@ function PatternAnalysisPage() {
                         
                         {/* pattern */}
                         {patterns.topAssociationPatterns.map((feature,index)=>(
-                            <div key={index} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border border-border">
+                            <div key={index} className="max-sm:flex-col flex items-center justify-between p-4 bg-muted/50 rounded-lg border border-border">
                                 <div>
                                     <p className="font-medium text-foreground">{feature.whenWeSee} → {feature.weOftenFind}</p>
                                 </div>
-                                <div className="text-right">
+                                <div className="sm:hidden border-gray-400 border-1 w-full my-4"></div>
+                                <div className="text-right max-sm:text-center">
                                     <p className="text-sm text-muted-foreground">
                                     Confidence: <span className="font-semibold text-primary">{(feature.confidence * 100).toFixed(0)}%</span>
                                     </p>

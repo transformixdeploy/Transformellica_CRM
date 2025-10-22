@@ -93,7 +93,7 @@ function AIAssistantPage() {
             <Card className="mb-8 bg-card border-border">
               <CardContent className="px-6 py-8">
                 <div className="flex items-center mb-6">
-                  <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center mr-3">
+                  <div className="min-w-8 min-h-8 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center mr-3">
                     <Icon icon="ph:lightbulb-bold" className="w-5 h-5 text-primary-foreground" />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground">Smart Question Examples</h3>
@@ -154,7 +154,7 @@ function AIAssistantPage() {
                 </div>
                 <h3 className="text-xl font-semibold text-foreground">Ask Your Question</h3>
               </div>
-              <div className="flex gap-4 items-center">
+              <div className="flex max-sm:flex-col gap-4 items-center">
                 <Input
                   disabled={!dataExists || isAnalysing}
                   onChange={onQuestionChange}
@@ -234,7 +234,7 @@ function AIAssistantPage() {
             {smartAnswer.relevantStatistics.length > 0 && <Card className="border-2 border-border bg-card">
               <CardContent className="px-6 py-6">
                 <div className="flex items-center mb-4">
-                  <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center mr-3">
+                  <div className="min-w-8 min-h-8 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center mr-3">
                     <Icon icon="ph:chart-line-up-bold" className="w-5 h-5 text-primary-foreground" />
                   </div>
                   <h3 className="text-lg font-semibold text-foreground">Relevant Statistics</h3>
@@ -301,7 +301,7 @@ function AIAssistantPage() {
                 {smartAnswer.actionableInsights.map((feature,index)=>(
                   <div key={index} className="p-4 bg-muted/50 rounded-lg border border-border">
                     <div className="flex items-center mb-3">
-                      <Icon icon="ph:trend-up-bold" className="w-5 h-5 text-primary mr-2" />
+                      {/* <Icon icon="ph:trend-up-bold" className="w-5 h-5 text-primary mr-2" /> */}
                       <span className="font-medium text-foreground">{feature.key}</span>
                     </div>
                     <p className="text-sm text-muted-foreground">{feature.value}</p>
@@ -326,7 +326,7 @@ function AIAssistantPage() {
                 {/* question */}
                 {smartAnswer.followUpQuestions.map((feature,index)=>(
                   <div key={index} className="p-2 px-4 border-2 border-border rounded-lg flex items-center space-x-2">
-                    <Icon icon="ph:arrow-right-bold" className="w-4 h-4 text-primary" />
+                    <Icon icon="ph:arrow-right-bold" className="min-w-5 min-h-5 text-primary" />
                     <div className="text-sm font-medium text-foreground">{feature}</div>
                   </div>
                 ))}

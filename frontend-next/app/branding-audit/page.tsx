@@ -85,7 +85,7 @@ const BrandingAudit = () => {
                         {data.brandColors.colors.length > 0 && data.brandColors.colors[0] !== "" && (
                             <div className="mt-4">
                                 <h3 className="text-xl font-semibold text-gray-200 mb-2">Palette:</h3>
-                                <div className="flex flex-wrap gap-2">
+                                <div className="max-sm:grid-cols-2 grid grid-cols-3 flex-wrap gap-2">
                                     {data.brandColors.colors.map((color, index) => (
                                         <div key={index} className="flex items-center space-x-2">
                                             <div className="w-6 h-6 rounded-full border border-gray-600" style={{ backgroundColor: color }}></div>

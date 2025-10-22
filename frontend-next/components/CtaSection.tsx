@@ -62,7 +62,7 @@ const CtaSection: React.FC<CTASectionProps> = ({ setAnalysing }) => {
             </DialogTrigger>
 
             {/* modal content (which is the MultiStepWizard component) */}
-            <DialogContent className="sm:max-w-md md:max-w-lg bg-card border-border/70 p-0 overflow-hidden max-h-[90vh] flex flex-col">
+            <DialogContent className="max-sm:max-w-2xs max-sm:max-h-[70vh] max-w-lg max-h-[90vh] bg-card border-border/70 p-0 overflow-hidden flex flex-col">
               <DialogTitle className="DialogTitle hidden"/>
               <MultiStepFormWizard setAnalysing={setAnalysing} onClose={() => setOpen(false)} />
             </DialogContent>

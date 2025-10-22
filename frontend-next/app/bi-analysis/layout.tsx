@@ -8,7 +8,7 @@ export default function RootLayout({
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-      <main className="flex-1 p-4 overflow-y-auto transition-all duration-300">
+      <main className="flex-1 p-4 mt-10 overflow-y-auto transition-all duration-300">
         {children}
       </main>
     </div>
