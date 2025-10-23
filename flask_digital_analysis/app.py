@@ -14,9 +14,11 @@ from social_analyzer import SocialAnalyzer
 from branding_analyzer import BrandingAnalyzer
 from colorthief import ColorThief
 from dotenv import load_dotenv
+from flask_cors import CORS
 
 app = Flask(__name__)
 load_dotenv()
+CORS(app, resources={r"/*": {"origins": ["https://app.thetransformix.com"]}})
 
 def map_seo_to_response(seo_result: Dict[str, Any], gpt_insights: Dict[str, Any]) -> Dict[str, Any]:
 
