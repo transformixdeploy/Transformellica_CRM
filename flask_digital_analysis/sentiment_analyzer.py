@@ -40,12 +40,12 @@ class SentimentAnalyzer:
             model_name = 'tabularisai/multilingual-sentiment-analysis'
             tokenizer = AutoTokenizer.from_pretrained(model_name)
             model = AutoModelForSequenceClassification.from_pretrained(model_name)
-            device = 0 if hasattr(torch, 'cuda') and torch.cuda.is_available() else -1
+            # device = 0 if hasattr(torch, 'cuda') and torch.cuda.is_available() else -1
             self.sentiment_pipeline = pipeline(
                 task="text-classification",
                 model=model,
                 tokenizer=tokenizer,
-                device=device
+                device=-1
             )
         except Exception as error:
             logging.error(f"Failed to initialize HF sentiment pipeline: {error}")
@@ -106,6 +106,13 @@ class SentimentAnalyzer:
         print(f"[DEBUG] Scroll limit set to: {scroll_limit}")
         browser = self.setup_browser()
         print(f"[DEBUG] Browser setup complete, navigating to URL...")
+        # Ensure Google Maps is loaded in English (Egypt region)
+        if "hl=" not in url:
+            if "?" in url:
+                url += "&hl=en&gl=eg"
+            else:
+                url += "?hl=en&gl=eg"
+        print(f"[DEBUG] Final URL with language/region enforced: {url}")
         browser.get(url)
         print(f"[DEBUG] Page loaded, waiting 10 seconds...")
         time.sleep(10)
@@ -115,7 +122,13 @@ class SentimentAnalyzer:
             
             print(f"[DEBUG] Current page title: {browser.title}")
             print(f"[DEBUG] Current URL after navigation: {browser.current_url}")
-            
+            cookie_button_selector = "[aria-label='Accept all']" # This is just a guess!
+            accept_button = WebDriverWait(browser, 10).until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, cookie_button_selector))
+                )
+            accept_button.click()
+            print(f"[DEBUG] Clicked cookie consent button.")
+            print(f"[DEBUG] Current URL after navigation: {browser.current_url}")
             reviews_tab = None
             tab_selectors = [
                 'button[data-tab-index="1"]',
@@ -126,7 +139,11 @@ class SentimentAnalyzer:
                 'button:contains("Reviews")',
                 'button:contains("مراجعات")'
             ]
-            
+            time.sleep(30)
+            browser.save_screenshot('vps_error.png')
+            with open('vps_error.html', 'w', encoding='utf-8') as f:
+                f.write(browser.page_source)
+            logging.critical("Saved debug screenshot and HTML. Check vps_error.png!")
             for selector in tab_selectors:
                 try:
                     reviews_tab = browser.find_element(By.CSS_SELECTOR, selector)
