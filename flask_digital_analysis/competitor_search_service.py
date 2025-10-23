@@ -25,7 +25,7 @@ class CompetitorSearchService:
     def setup_browser(self):
         try:
             options = Options()
-            # options.add_argument("--headless")
+            options.add_argument("--headless")
             options.add_argument("--no-sandbox")
             options.add_argument("--disable-dev-shm-usage")
             options.add_argument("--disable-gpu")
@@ -56,7 +56,7 @@ class CompetitorSearchService:
         try:
             from selenium.webdriver.edge.options import Options as EdgeOptions
             options = EdgeOptions()
-            # options.add_argument("--headless")
+            options.add_argument("--headless")
             options.add_argument("--no-sandbox")
             options.add_argument("--disable-dev-shm-usage")
             options.add_argument("--disable-gpu")
@@ -148,6 +148,16 @@ class CompetitorSearchService:
         competitors = []
         
         try:
+            main=WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "[role='main']"))
+            )
+
+            logging.info(main.get_attribute('outerHTML'))
+
+            logging.info("Main results container loaded")
+            inner_html = main.get_attribute("innerHTML")
+            print(inner_html)
+
             selectors_to_try = [
                 "[data-result-index]",
                 ".Nv2PK",
@@ -158,16 +168,13 @@ class CompetitorSearchService:
             ]
             
             result_items = []
-            for selector in selectors_to_try:
-                try:
-                    items = driver.find_elements(By.CSS_SELECTOR, selector)
-                    if items:
-                        result_items = items
-                        logging.info(f"Found {len(items)} result items using selector: {selector}")
-                        break
-                except Exception:
-                    continue
-            
+            items = WebDriverWait(driver,10).until(
+                        EC.presence_of_all_elements_located((By.CSS_SELECTOR,"div.Nv2PK.tH5CWc.THOPZb"))
+                    )
+                    
+            if items:
+                result_items = items
+                logging.info(f"Found {len(items)} result items using selector:")
             if not result_items:
                 logging.warning("No result items found with any selector")
                 return competitors
