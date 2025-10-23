@@ -92,11 +92,16 @@ class CompetitorSearchService:
         competitors = []
         
         try:
-            search_url = f"https://www.google.com/maps/search/{search_query.replace(' ', '+')}"
+            search_url = f"https://www.google.com/maps/search/{search_query.replace(' ', '+')}?hl=en&gl=eg"
             logging.info(f"Navigating to: {search_url}")
             driver.get(search_url)
-            
-            wait = WebDriverWait(driver, 20)
+            # Wait up to 10 seconds for a possible "Accept All" button
+            cookie_button_selector = "[aria-label='Accept all']" # This is just a guess!
+            accept_button = WebDriverWait(driver, 10).until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, cookie_button_selector))
+                )
+            accept_button.click()
+            logging.info("Clicked cookie consent button.")
             
             selectors_to_try = [
                 "[data-value='Directions']",
@@ -110,7 +115,9 @@ class CompetitorSearchService:
             element_found = False
             for selector in selectors_to_try:
                 try:
-                    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
+                    WebDriverWait(driver,10).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+                        )
                     logging.info(f"Found results using selector: {selector}")
                     element_found = True
                     break
@@ -146,20 +153,6 @@ class CompetitorSearchService:
     
     async def _extract_competitor_data(self, driver, max_results: int) -> List[Dict[str, Any]]:
         competitors = []
-        try:
-        # Wait up to 10 seconds for a possible "Accept All" button
-            cookie_button_selector = "[aria-label='Alle akzeptieren']" # This is just a guess!
-            accept_button = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, cookie_button_selector))
-            )
-            accept_button.click()
-            logging.info("Clicked cookie consent button.")
-            await asyncio.sleep(2) # Wait for overlay to disappear
-        except TimeoutException:
-            logging.info("No cookie consent button found, or it timed out.")
-        except Exception as e:
-            logging.warning(f"Could not click cookie button: {e}")
-        
         try:
             main=WebDriverWait(driver, 30).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "[role='main']"))
@@ -336,7 +329,7 @@ class CompetitorSearchService:
         if not raw_name:
             return ""
         name = raw_name.strip()
-        invalid_names = {"النتائج", "النتايج", "نتائج", "Results", "RESULTS"}
+        invalid_names = {"Ø§Ù„Ù†ØªØ§Ø¦Ø¬", "Ø§Ù„Ù†ØªØ§ÙŠØ¬", "Ù†ØªØ§Ø¦Ø¬", "Results", "RESULTS"}
         if name in invalid_names:
             return ""
         if len(name) <= 2:
@@ -396,7 +389,7 @@ class CompetitorSearchService:
                 if address and "rating" not in address.lower() and "star" not in address.lower():
                     break
             
-            place_url = f"https://www.google.com/maps/search/{name.replace(' ', '+')}"
+            place_url = f"https://www.google.com/maps/search/{name.replace(' ', '+')}?hl=en&gl=eg"
             
             competitor_data = {
                 "name": name.strip(),
