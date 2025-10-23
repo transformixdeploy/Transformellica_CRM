@@ -25,7 +25,7 @@ class CompetitorSearchService:
     def setup_browser(self):
         try:
             options = Options()
-            options.add_argument("--headless")
+            # options.add_argument("--headless")
             options.add_argument("--no-sandbox")
             options.add_argument("--disable-dev-shm-usage")
             options.add_argument("--disable-gpu")
@@ -56,7 +56,7 @@ class CompetitorSearchService:
         try:
             from selenium.webdriver.edge.options import Options as EdgeOptions
             options = EdgeOptions()
-            options.add_argument("--headless")
+            # options.add_argument("--headless")
             options.add_argument("--no-sandbox")
             options.add_argument("--disable-dev-shm-usage")
             options.add_argument("--disable-gpu")
