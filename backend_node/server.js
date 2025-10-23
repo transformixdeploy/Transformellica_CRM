@@ -19,7 +19,7 @@ const app = express();
 
 app.use(cors({
   origin: process.env.FRONTEND_URLS.split(","), 
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["Content-Type", "Authorization", "Access-Control-Allow-Origin"],
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]
 }));
