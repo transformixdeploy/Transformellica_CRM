@@ -1,16 +1,17 @@
 "use client";
 
-import { localStorageDataNames, socialSWOTData } from '@/lib/constants';
+import { localStorageDataNames, socialSWOTData, userDataCategories } from '@/lib/constants';
 import React, { useContext, useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import Link from 'next/link';
 import { ReanalyzeButton } from '@/components/ReanalyzeButton';
-import { HeartPlus, MessageSquareMore, ThumbsUp } from 'lucide-react';
+import { AlertCircle, HeartPlus, MessageSquareMore, ThumbsUp } from 'lucide-react';
 import { authenticatePageUseEffect } from '@/utilities/authenticatePageUseEffect';
 import { AuthContext } from '@/context/AuthContext';
 import CheckingUserCard from '@/components/CheckingUserCard';
+import { checkServiceLimitReached } from '@/utilities/axiosRequester';
 
 // Custom Tooltip Component
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -31,8 +32,9 @@ const SocialSWOT = () => {
   const router = useRouter();
 
   const [data, setData] = useState(socialSWOTData);
+  const [requestsLimitError, setRequestsLimitError] = useState("");
 
-  const {user, isAuthenticated, isLoading} = useContext(AuthContext);
+  const {user, isAuthenticated, isLoading, accessToken} = useContext(AuthContext);
 
   authenticatePageUseEffect(isAuthenticated, isLoading, router);
 
@@ -43,7 +45,15 @@ const SocialSWOT = () => {
     setData(JSON.parse(localStorage.getItem(localStorageDataNames.SOCIAL_MEDIA_SWOT)!));
   }, []);
 
-  function handleDeleteAnalysis() {
+  async function handleDeleteAnalysis() {
+
+    const serviceRequestsLimitReached = await checkServiceLimitReached(accessToken!, userDataCategories.SOCIAL_SWOT);
+
+    if(serviceRequestsLimitReached){
+      setRequestsLimitError("Only 1 request per service.");
+      return;
+    }
+
     localStorage.removeItem(localStorageDataNames.SOCIAL_MEDIA_SWOT);
     router.push("/");
   }
@@ -64,8 +74,16 @@ const SocialSWOT = () => {
           <p className="text-center text-gray-400 text-lg mb-6">
             Detailed insights into your social media performance and competitive landscape.
           </p>
-          <div className="flex justify-center">
-            <ReanalyzeButton onClick={handleDeleteAnalysis}/>
+          <div className='flex flex-col text-center items-center'>
+            <div className="flex justify-center">
+              <ReanalyzeButton onClick={handleDeleteAnalysis}/>
+            </div>
+            {requestsLimitError.length > 0 && 
+              <div className="m-3 flex max-w-[300] items-center gap-2 px-3 py-2 text-sm text-yellow-400 bg-yellow-50 dark:bg-yellow-950 dark:text-yellow-300 rounded-md">
+                <AlertCircle className="h-4 w-4" />
+                <span>{requestsLimitError}</span>
+              </div>
+            }
           </div>
         </header>
   

@@ -76,20 +76,51 @@ async function analysePatterns(minSupport: number) : Promise<{
     return responseFormat(await axios.post(`${baseBackendURL}/crm/pattern-analysis`, {minSupport}));
 }
 
-async function getWebsiteSWOTData(form: {}) : Promise<{status: string, data: WebsiteSWOTData}>{
-    return responseFormat(await axios.post(`${baseBackendURL}/social/website-swot`, form ));
+async function getWebsiteSWOTData(form: {}, accessToken: string) : Promise<{status: string, data: WebsiteSWOTData}>{
+    return responseFormat(await axios.post(`${baseBackendURL}/social/website-swot`, form , {
+        withCredentials:true, 
+        headers: {
+            Authorization: `Bearer ${accessToken}`
+        }
+    }));
 }
 
-async function getSocialSWOTData(form: {}) : Promise<{status: string, data: SocialSWOTData}>{
-    return responseFormat(await axios.post(`${baseBackendURL}/social/social-swot`, form ));
+async function getSocialSWOTData(form: {}, accessToken: string) : Promise<{status: string, data: SocialSWOTData}>{
+    return responseFormat(await axios.post(`${baseBackendURL}/social/social-swot`, form , {
+        withCredentials:true, 
+        headers: {
+            Authorization: `Bearer ${accessToken}`
+        }
+    }));
 }
 
-async function getSentimentAnalysisData(form: {}) : Promise<{status: string, data: SentimentData }>{
-    return responseFormat(await axios.post(`${baseBackendURL}/social/sentiment-analysis`, form ));
+async function getSentimentAnalysisData(form: {}, accessToken: string) : Promise<{status: string, data: SentimentData }>{
+    return responseFormat(await axios.post(`${baseBackendURL}/social/sentiment-analysis`, form , {
+        withCredentials:true, 
+        headers: {
+            Authorization: `Bearer ${accessToken}`
+        }
+    }));
 }
 
-async function getBrandAuditData(form: FormData) : Promise<{status: string, data: BrandingAuditData}>{
-    return responseFormat(await axios.post(`${baseBackendURL}/social/branding-audit`, form ));
+async function getBrandAuditData(form: FormData, accessToken: string) : Promise<{status: string, data: BrandingAuditData}>{
+    return responseFormat(await axios.post(`${baseBackendURL}/social/branding-audit`, form , {
+        withCredentials:true, 
+        headers: {
+            Authorization: `Bearer ${accessToken}`
+        }
+    }));
+}
+
+async function checkServiceLimitReached(accessToken: string, userDataCategory: string) : Promise<boolean>{
+    
+    const response = await axios.post(`${baseBackendURL}/social/serviceLimitReached`, {category: userDataCategory}, {
+        headers: {
+            Authorization: `Bearer ${accessToken}`
+        }
+    });    
+    
+    return response.data.data.reached;
 }
 
 
@@ -112,5 +143,6 @@ export {
     login,
     refresh,
     logout,
-    register
+    register,
+    checkServiceLimitReached
 }

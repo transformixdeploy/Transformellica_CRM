@@ -7,6 +7,7 @@ import crmRouter from "./routes/crm-router.js";
 import authRouter from "./routes/auth-router.js";
 import {sequelize} from './models/index.js';
 import cookieParser from 'cookie-parser';
+import authMiddleware from './middlewares/authMiddleware.js';
 
 // Cloudinary configuration
 cloudinary.config({
@@ -29,7 +30,7 @@ app.use(express.json());
 const port = process.env.PORT || 4000;
 
 app.use("/api/crm", crmRouter);
-app.use("/api/social", socialRouter);
+app.use("/api/social", authMiddleware, socialRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/test", (req,res,next)=>{
   res.status(200).json({message: "this is test", frontend: process.env.FRONTEND_URL, database: process.env.DB_HOST})

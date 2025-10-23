@@ -48,7 +48,7 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
   const [showAuthError, setShowAuthError] = useState(false);
   const router = useRouter();
 
-  const {isAuthenticated} = useContext(AuthContext);
+  const {isAuthenticated, accessToken, user} = useContext(AuthContext);
 
   const wizardSteps: Question[] = selectedService ? getQuestionsForService(selectedService.id) : [];
   const totalQuestionSteps: number = selectedService ? wizardSteps.length : 0;
@@ -173,7 +173,7 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
         instagram_link: submissionData.instagram_link
       }
       
-      const response = await getSocialSWOTData(form);
+      const response = await getSocialSWOTData(form, accessToken!);
       localStorage.setItem(localStorageDataNames.SOCIAL_MEDIA_SWOT, JSON.stringify(response.data));
       
       router.push("/social-swot");
@@ -191,7 +191,7 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
         website_url: submissionData.website_url
       }
       
-      const response = await getWebsiteSWOTData(form);
+      const response = await getWebsiteSWOTData(form, accessToken!);
       localStorage.setItem(localStorageDataNames.WEBSITE_SWOT, JSON.stringify(response.data));
       
       router.push("/website-swot");
@@ -208,7 +208,7 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
         industry_field: submissionData.industry,
       }
 
-      const response = await getSentimentAnalysisData(form);
+      const response = await getSentimentAnalysisData(form, accessToken!);
       localStorage.setItem(localStorageDataNames.SENTIMENT_ANALYSIS, JSON.stringify(response.data));
       
       router.push("/customer-sentiment");
@@ -228,7 +228,7 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
       form.append("logoUpload", submissionData.raw_form_data.logoUpload || new File([], ""));
       
       
-      const response = await getBrandAuditData(form);
+      const response = await getBrandAuditData(form, accessToken!);
       localStorage.setItem(localStorageDataNames.BRANDING_AUDIT, JSON.stringify(response.data));
       
       router.push("/branding-audit");

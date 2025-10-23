@@ -5,20 +5,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import ReactMarkdown from 'react-markdown';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {localStorageDataNames, websiteSWOTData} from "@/lib/constants";
+import {localStorageDataNames, userDataCategories, websiteSWOTData} from "@/lib/constants";
 import { ReanalyzeButton } from '@/components/ReanalyzeButton';
 import CircularProgress  from '@/components/CicrularProgress';
 import { AuthContext } from '@/context/AuthContext';
 import { authenticatePageUseEffect } from '@/utilities/authenticatePageUseEffect';
 import CheckingUserCard from '@/components/CheckingUserCard';
+import { checkServiceLimitReached } from '@/utilities/axiosRequester';
+import { AlertCircle } from 'lucide-react';
 
 const WebsiteSWOT = () => {
   
     const router = useRouter();
     
     const [data, setData] = useState(websiteSWOTData);
+    const [requestsLimitError, setRequestsLimitError] = useState("");
 
-    const {user, isAuthenticated, isLoading} = useContext(AuthContext);
+    const {user, isAuthenticated, isLoading, accessToken} = useContext(AuthContext);
 
     authenticatePageUseEffect(isAuthenticated, isLoading, router);
 
@@ -32,7 +35,15 @@ const WebsiteSWOT = () => {
 
     }, []);
 
-    function handleDeleteAnalysis(){
+    async function handleDeleteAnalysis(){
+
+      const serviceRequestsLimitReached = await checkServiceLimitReached(accessToken!, userDataCategories.WEBSITE_SWOT);
+
+      if(serviceRequestsLimitReached){
+        setRequestsLimitError("Only 1 request per service.");
+        return;
+      }
+
       localStorage.removeItem(localStorageDataNames.WEBSITE_SWOT);
       router.push("/");
     }
@@ -48,9 +59,17 @@ const WebsiteSWOT = () => {
               <h1 className="text-5xl font-extrabold text-center text-white mb-4">
                 Website optimization analytics
               </h1>
-            <div className="flex justify-center">
-              <ReanalyzeButton onClick={handleDeleteAnalysis}/>
-            </div>
+              <div className='flex flex-col text-center items-center'>
+                <div className="flex justify-center">
+                  <ReanalyzeButton onClick={handleDeleteAnalysis}/>
+                </div>
+                {requestsLimitError.length > 0 && 
+                  <div className="m-3 flex max-w-[300] items-center gap-2 px-3 py-2 text-sm text-yellow-400 bg-yellow-50 dark:bg-yellow-950 dark:text-yellow-300 rounded-md">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>{requestsLimitError}</span>
+                  </div>
+                }
+              </div>
           </header>
     
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

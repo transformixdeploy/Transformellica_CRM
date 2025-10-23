@@ -1,6 +1,6 @@
 "use client";
 
-import { brandingAuditData, localStorageDataNames } from '@/lib/constants';
+import { brandingAuditData, localStorageDataNames, userDataCategories } from '@/lib/constants';
 import React, { useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
@@ -8,13 +8,16 @@ import { ReanalyzeButton } from '@/components/ReanalyzeButton';
 import { AuthContext } from '@/context/AuthContext';
 import { authenticatePageUseEffect } from '@/utilities/authenticatePageUseEffect';
 import CheckingUserCard from '@/components/CheckingUserCard';
+import { checkServiceLimitReached } from '@/utilities/axiosRequester';
+import { AlertCircle } from 'lucide-react';
 
 const BrandingAudit = () => {
     const router = useRouter();
 
     const [data, setData] = useState(brandingAuditData);
+    const [requestsLimitError, setRequestsLimitError] = useState("");
 
-    const {user, isAuthenticated, isLoading} = useContext(AuthContext);
+    const {user, isAuthenticated, isLoading, accessToken} = useContext(AuthContext);
 
     authenticatePageUseEffect(isAuthenticated, isLoading, router);
 
@@ -25,7 +28,15 @@ const BrandingAudit = () => {
         setData(JSON.parse(localStorage.getItem(localStorageDataNames.BRANDING_AUDIT)!));
     }, []);
 
-    function handleDeleteAnalysis() {
+    async function handleDeleteAnalysis() {
+
+        const serviceRequestsLimitReached = await checkServiceLimitReached(accessToken!, userDataCategories.BRAND_AUDIT);
+
+        if(serviceRequestsLimitReached){
+            setRequestsLimitError("Only 1 request per service.");
+            return;
+        }
+
         localStorage.removeItem(localStorageDataNames.BRANDING_AUDIT);
         router.push("/");
     }
@@ -44,8 +55,16 @@ const BrandingAudit = () => {
                     <p className="text-center text-gray-400 text-lg mb-6">
                         {"A comprehensive analysis of your brand's visual identity, messaging, and overall strategy."}
                     </p>
-                    <div className="flex justify-center">
+                    <div className='flex flex-col text-center items-center'>
+                        <div className="flex justify-center">
                         <ReanalyzeButton onClick={handleDeleteAnalysis}/>
+                        </div>
+                        {requestsLimitError.length > 0 && 
+                        <div className="m-3 flex max-w-[300] items-center gap-2 px-3 py-2 text-sm text-yellow-400 bg-yellow-50 dark:bg-yellow-950 dark:text-yellow-300 rounded-md">
+                            <AlertCircle className="h-4 w-4" />
+                            <span>{requestsLimitError}</span>
+                        </div>
+                        }
                     </div>
                 </header>
     

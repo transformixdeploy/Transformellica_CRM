@@ -1,6 +1,6 @@
 "use client";
 
-import { localStorageDataNames, sentimentData } from '@/lib/constants';
+import { localStorageDataNames, sentimentData, userDataCategories } from '@/lib/constants';
 import React, { useContext, useEffect, useState } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ScatterChart, Scatter, ZAxis, Label, PieLabelRenderProps } from 'recharts';
 import { useRouter } from 'next/navigation';
@@ -10,6 +10,8 @@ import { ReanalyzeButton } from '@/components/ReanalyzeButton';
 import { AuthContext } from '@/context/AuthContext';
 import { authenticatePageUseEffect } from '@/utilities/authenticatePageUseEffect';
 import CheckingUserCard from '@/components/CheckingUserCard';
+import { checkServiceLimitReached } from '@/utilities/axiosRequester';
+import { AlertCircle } from 'lucide-react';
 
 const SentimentAnalysis = () => {
 
@@ -52,8 +54,9 @@ const SentimentAnalysis = () => {
     const router = useRouter();  
 
     const [data, setData] = useState(sentimentData);
+    const [requestsLimitError, setRequestsLimitError] = useState("");
 
-    const {user, isAuthenticated, isLoading} = useContext(AuthContext);
+    const {user, isAuthenticated, isLoading, accessToken} = useContext(AuthContext);
 
     authenticatePageUseEffect(isAuthenticated, isLoading, router);
 
@@ -67,9 +70,17 @@ const SentimentAnalysis = () => {
 
     }, []);
 
-    function handleDeleteAnalysis(){
-      localStorage.removeItem(localStorageDataNames.SENTIMENT_ANALYSIS);
-      router.push("/");
+    async function handleDeleteAnalysis(){
+
+        const serviceRequestsLimitReached = await checkServiceLimitReached(accessToken!, userDataCategories.SENTIMENT);
+
+        if(serviceRequestsLimitReached){
+            setRequestsLimitError("Only 1 request per service.");
+            return;
+        }
+
+        localStorage.removeItem(localStorageDataNames.SENTIMENT_ANALYSIS);
+        router.push("/");
     }
 
     if(!isAuthenticated){
@@ -88,8 +99,16 @@ const SentimentAnalysis = () => {
                     <p className="text-center text-gray-400 text-lg">
                         Comprehensive insights into your customer sentiment and competitive landscape.
                     </p>
-                    <div className="flex justify-center mt-6">
+                    <div className='flex flex-col text-center items-center'>
+                    <div className="flex justify-center mt-2">
                         <ReanalyzeButton onClick={handleDeleteAnalysis}/>
+                        </div>
+                        {requestsLimitError.length > 0 && 
+                        <div className="m-3 flex max-w-[300] items-center gap-2 px-3 py-2 text-sm text-yellow-400 bg-yellow-50 dark:bg-yellow-950 dark:text-yellow-300 rounded-md">
+                            <AlertCircle className="h-4 w-4" />
+                            <span>{requestsLimitError}</span>
+                        </div>
+                        }
                     </div>
                 </header>
     

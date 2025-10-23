@@ -19,5 +19,8 @@ router.route("/social-swot")
 router.route("/branding-audit")
     .post(upload.single("logoUpload") , socialAnalysisController.brandingAudit);
 
+router.route("/serviceLimitReached")
+    .post(socialAnalysisController.serviceLimitReached);
+
 
 export default router;
