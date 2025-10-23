@@ -152,6 +152,11 @@ class CompetitorSearchService:
                 EC.presence_of_element_located((By.CSS_SELECTOR, "[role='main']"))
             )
 
+            driver.save_screenshot('vps_critical_error.png')
+            with open('vps_critical_error.html', 'w', encoding='utf-8') as f:
+                f.write(driver.page_source)
+            logging.critical("Saved debug screenshot and HTML. Check vps_critical_error.png!")
+
             logging.info(main.get_attribute('outerHTML'))
 
             logging.info("Main results container loaded")
@@ -172,11 +177,13 @@ class CompetitorSearchService:
                         EC.presence_of_all_elements_located((By.CSS_SELECTOR,"div.Nv2PK.tH5CWc.THOPZb"))
                     )
                     
+
             if items:
                 result_items = items
                 logging.info(f"Found {len(items)} result items using selector:")
             if not result_items:
                 logging.warning("No result items found with any selector")
+
                 return competitors
             
             for i, item in enumerate(result_items[:max_results]):
