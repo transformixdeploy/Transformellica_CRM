@@ -146,6 +146,19 @@ class CompetitorSearchService:
     
     async def _extract_competitor_data(self, driver, max_results: int) -> List[Dict[str, Any]]:
         competitors = []
+        try:
+        # Wait up to 10 seconds for a possible "Accept All" button
+            cookie_button_selector = "[aria-label='Alle akzeptieren']" # This is just a guess!
+            accept_button = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, cookie_button_selector))
+            )
+            accept_button.click()
+            logging.info("Clicked cookie consent button.")
+            await asyncio.sleep(2) # Wait for overlay to disappear
+        except TimeoutException:
+            logging.info("No cookie consent button found, or it timed out.")
+        except Exception as e:
+            logging.warning(f"Could not click cookie button: {e}")
         
         try:
             main=WebDriverWait(driver, 30).until(
