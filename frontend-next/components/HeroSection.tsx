@@ -9,10 +9,13 @@ import { Dialog, DialogContent, DialogTitle, DialogTrigger } from './ui/dialog';
 import MultiStepFormWizard from './MultiStepFormWizard';
 
 interface HeroSectionProps {
-  setAnalysing: (analysing: boolean) => void;
+  setWebAnalysing: (analysing: boolean) => void;
+  setSocialAnalysing: (analysing: boolean) => void;
+  setBrandingAnalysing: (analysing: boolean) => void;
+  setSentimentAnalysing: (analysing: boolean) => void;
 }
 
-const HeroSection: React.FC<HeroSectionProps> = ({ setAnalysing }) => {
+const HeroSection: React.FC<HeroSectionProps> = ({setWebAnalysing, setSocialAnalysing, setBrandingAnalysing, setSentimentAnalysing}) => {
   const [open, setOpen] = useState(false);
 
   return (
@@ -82,7 +85,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ setAnalysing }) => {
             {/* modal content (which is the MultiStepWizard component) */}
             <DialogContent className="max-sm:max-w-2xs max-sm:max-h-[70vh] max-w-lg max-h-[90vh] bg-card border-border/70 p-0 overflow-hidden flex flex-col">
               <DialogTitle className="DialogTitle hidden"/>
-              <MultiStepFormWizard onClose={() => setOpen(false)} setAnalysing={setAnalysing} />
+              <MultiStepFormWizard onClose={() => setOpen(false)} setWebAnalysing={setWebAnalysing} setBrandingAnalysing={setBrandingAnalysing} setSocialAnalysing={setSocialAnalysing} setSentimentAnalysing={setSentimentAnalysing} />
             </DialogContent>
           </Dialog>
 

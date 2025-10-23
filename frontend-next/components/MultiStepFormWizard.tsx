@@ -31,12 +31,15 @@ interface FormErrors {
 
 interface MultiStepFormWizardProps {
   onClose?: () => void; // Added onClose prop
-  setAnalysing: (analysing: boolean) => void;
+  setWebAnalysing: (analysing: boolean) => void;
+  setSocialAnalysing: (analysing: boolean) => void;
+  setBrandingAnalysing: (analysing: boolean) => void;
+  setSentimentAnalysing: (analysing: boolean) => void;
 }
 
 // As this wizard is being called by another page that renders a modal to show this 
 // wizard so the page should page the "onClose" function so the wizard can use it to close the modal that was opened earlier
-const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setAnalysing }) => {
+const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setWebAnalysing, setSocialAnalysing, setBrandingAnalysing, setSentimentAnalysing }) => {
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [formData, setFormData] = useState<FormData>({});
@@ -137,8 +140,6 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setA
   const handleSubmit = async () => {
     // No user concept, no authentication check
     
-    setAnalysing(true);
-    
     const submissionData = {
       service_id: selectedService?.id,
       service_name: selectedService?.name,
@@ -161,6 +162,8 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setA
     // console.log(submissionData);
     
     if(submissionData.service_id === "social_media_swot"){
+
+      setSocialAnalysing(true);
       
       const form = {
         business_description: submissionData.business_description,
@@ -178,6 +181,8 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setA
     
     }else if(submissionData.service_id === "website_audit_swot"){
       
+      setWebAnalysing(true);
+
       const form = {
         business_description: submissionData.business_description,
         company_name: submissionData.company_name,
@@ -192,6 +197,8 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setA
       router.push("/website-swot");
 
     }else if(submissionData.service_id === "customer_sentiment"){
+
+      setSentimentAnalysing(true);
       
       const form = {
         company_name: submissionData.company_name,
@@ -208,6 +215,8 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setA
       /////////////////////////////
 
     }else if(submissionData.service_id === "branding_audit"){
+
+      setBrandingAnalysing(true);
       
       const form = new FormData();
       form.append("company_name", submissionData.company_name || "");
@@ -237,14 +246,23 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setA
         setSelectedService(null);
         setCurrentStep(0);
         setFormData({});
-        setAnalysing(false);
+        setWebAnalysing(false);
+        setSocialAnalysing(false);
+        setBrandingAnalysing(false);
+        setSentimentAnalysing(false);
       }, 500);
 
     } catch (error) {
       console.error('Supabase submission error:', error);
-      setAnalysing(false);
+      setWebAnalysing(false);
+      setSocialAnalysing(false);
+      setBrandingAnalysing(false);
+      setSentimentAnalysing(false);
     } finally{
-      setAnalysing(false);
+      setWebAnalysing(false);
+      setSocialAnalysing(false);
+      setBrandingAnalysing(false);
+      setSentimentAnalysing(false);
     }
   };
   
