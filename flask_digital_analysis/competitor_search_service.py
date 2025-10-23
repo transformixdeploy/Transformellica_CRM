@@ -186,17 +186,18 @@ class CompetitorSearchService:
             ]
             
             result_items = []
-            items = WebDriverWait(driver,10).until(
-                        EC.presence_of_all_elements_located((By.CSS_SELECTOR,"div.Nv2PK.tH5CWc.THOPZb"))
-                    )
-                    
+            for selector in selectors_to_try:
+                try:
+                    items = driver.find_elements(By.CSS_SELECTOR, selector)
+                    if items:
+                        result_items = items
+                        logging.info(f"Found {len(items)} result items using selector: {selector}")
+                        break
+                except Exception:
+                    continue
 
-            if items:
-                result_items = items
-                logging.info(f"Found {len(items)} result items using selector:")
             if not result_items:
                 logging.warning("No result items found with any selector")
-
                 return competitors
             
             for i, item in enumerate(result_items[:max_results]):
@@ -246,6 +247,7 @@ class CompetitorSearchService:
                 candidate = self._sanitize_business_name(candidate)
                 if candidate:
                     name = candidate
+                    logging.info(f"Extracted name using selector {selector}: {name}")
                     break
             
             if not name:
