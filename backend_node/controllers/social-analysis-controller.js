@@ -6,6 +6,7 @@ import HttpStatusMessage from '../utils/HttpStatusMessage.js';
 import { asyncWrapper } from '../utils/asyncWrapper.js';
 import {UserData, User} from "../models/index.js";
 import {categories} from "../utils/userDataCategory.js";
+import { roles } from '../utils/userRoles.js';
 
 const websiteSWOT = asyncWrapper(
     async (req,res,next)=>{
@@ -17,13 +18,18 @@ const websiteSWOT = asyncWrapper(
             userId: user.id
         }})
 
-        if(oldUserData){
+        if(oldUserData && user.role !== roles.ADMIN){
             return JSendResponser(res, HttpStatusCode.BAD_REQUEST, HttpStatusMessage.FAIL, {message: "Only 1 request per service."});
         }
+
+        console.log("Website SWOT: User is verified");
 
         const {business_description, company_name, country, goal, website_url} = req.body;
       
         if(process.env.AI_SERVICE_TRANSFORMELLICA_URL){
+
+            console.log("Website SWOT: Sending request to AI Service");
+
             const response = await axios.post(`${process.env.AI_SERVICE_TRANSFORMELLICA_URL}/website-swot-analysis`, {
                 business_description,
                 company_name,
@@ -31,26 +37,37 @@ const websiteSWOT = asyncWrapper(
                 goal,
                 website_url
             });
+
+            console.log("Website SWOT: Response received from AI Service");
             
+
+            console.log("Website SWOT: Saving data to UserData");
             // save data to UserData
             const createdUserData = await UserData.create({
                 data: response.data,
                 category: categories.WEBSITE_SWOT,
                 userId: user.id
             });
+
+            console.log("Website SWOT: Data saved to UserData");
             
+            
+            console.log("Website SWOT: Sending response to client");
             return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, response.data);
         }
 
         
-        // // save data to UserData
-        // const createdUserData = await UserData.create({
-        //     data: testData.websiteSWOTTestData,
-        //     category: categories.WEBSITE_SWOT,
-        //     userId: user.id
-        // });
+        // save data to UserData
+        const createdUserData = await UserData.create({
+            data: testData.websiteSWOTTestData,
+            category: categories.WEBSITE_SWOT,
+            userId: user.id
+        });
 
-        // JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, testData.websiteSWOTTestData);
+        console.log("Website SWOT: Data saved to UserData");
+
+        console.log("Website SWOT: Sending response to client");    
+        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, testData.websiteSWOTTestData);
     }
 );
 
@@ -64,13 +81,17 @@ const sentimentAnalysis = asyncWrapper(
             userId: user.id
         }})
 
-        if(oldUserData){
+        if(oldUserData && user.role !== roles.ADMIN){
             return JSendResponser(res, HttpStatusCode.BAD_REQUEST, HttpStatusMessage.FAIL, {message: "Only 1 request per service."});
         }
+        console.log("Sentiment Analysis: User is verified");
 
+        
         const {company_name, business_description, goal, country, industry_field} = req.body;
         
         if(process.env.AI_SERVICE_TRANSFORMELLICA_URL){
+            console.log("Sentiment Analysis: Sending request to AI Service");
+
             const response = await axios.post(`${process.env.AI_SERVICE_TRANSFORMELLICA_URL}/customer-sentiment-analysis`, {
               business_description,
               company_name,
@@ -78,26 +99,32 @@ const sentimentAnalysis = asyncWrapper(
               goal,
               industry_field
             });
+            console.log("Sentiment Analysis: Response received from AI Service");
 
+            console.log("Sentiment Analysis: Saving data to UserData");
             // save data to UserData
             const createdUserData = await UserData.create({
                 data: response.data,
                 category: categories.SENTIMENT,
                 userId: user.id
             });
-          
+            console.log("Sentiment Analysis: Data saved to UserData");
+
+            console.log("Sentiment Analysis: Sending response to client");
             return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, response.data);
         }
         
 
-        // // save data to UserData
-        // const createdUserData = await UserData.create({
-        //     data: testData.sentimentTestData,
-        //     category: categories.SENTIMENT,
-        //     userId: user.id
-        // });
+        // save data to UserData
+        const createdUserData = await UserData.create({
+            data: testData.sentimentTestData,
+            category: categories.SENTIMENT,
+            userId: user.id
+        });
+        console.log("Sentiment Analysis: Data saved to UserData");
 
-        // JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, testData.sentimentTestData);
+        console.log("Sentiment Analysis: Sending response to client");
+        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, testData.sentimentTestData);
     }
 );
 
@@ -111,7 +138,7 @@ const socialSWOT = asyncWrapper(
             userId: user.id
         }})
 
-        if(oldUserData){
+        if(oldUserData && user.role !== roles.ADMIN){
             return JSendResponser(res, HttpStatusCode.BAD_REQUEST, HttpStatusMessage.FAIL, {message: "Only 1 request per service."});
         }
 
@@ -136,14 +163,14 @@ const socialSWOT = asyncWrapper(
             return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, response.data);
         }
 
-        // // save data to UserData
-        // const createdUserData = await UserData.create({
-        //     data: testData.socialSWOTTestData,
-        //     category: categories.SOCIAL_SWOT,
-        //     userId: user.id
-        // });
+        // save data to UserData
+        const createdUserData = await UserData.create({
+            data: testData.socialSWOTTestData,
+            category: categories.SOCIAL_SWOT,
+            userId: user.id
+        });
         
-        // JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, testData.socialSWOTTestData);
+        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, testData.socialSWOTTestData);
     }
 );
 
@@ -157,7 +184,7 @@ const brandingAudit = asyncWrapper(
             userId: user.id
         }})
 
-        if(oldUserData){
+        if(oldUserData && user.role !== roles.ADMIN){
             return JSendResponser(res, HttpStatusCode.BAD_REQUEST, HttpStatusMessage.FAIL, {message: "Only 1 request per service."});
         }
 
@@ -191,14 +218,14 @@ const brandingAudit = asyncWrapper(
             return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, response.data);
         }
 
-        // // save data to UserData
-        // const createdUserData = await UserData.create({
-        //     data: testData.brandAuditTestData,
-        //     category: categories.BRAND_AUDIT,
-        //     userId: user.id
-        // });
+        // save data to UserData
+        const createdUserData = await UserData.create({
+            data: testData.brandAuditTestData,
+            category: categories.BRAND_AUDIT,
+            userId: user.id
+        });
         
-        // JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, testData.brandAuditTestData); 
+        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, testData.brandAuditTestData); 
     }
 );
 
@@ -212,6 +239,10 @@ const serviceLimitReached = asyncWrapper(
             userId: user.id,
             category: category
         }})
+
+        if(user.role === roles.ADMIN){
+            JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {reached: false}); 
+        }
         
 
         if(userData){
