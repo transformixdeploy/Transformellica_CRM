@@ -1,37 +1,55 @@
 import os
 import aiohttp
 import json
-import asyncio 
+import asyncio  # Add this import
 import re
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 import anthropic
 import base64
 from dotenv import load_dotenv
+from token_monitor import token_monitor, track_tokens
 class GPTInsightsService:
+    """
+    AI Integration service for generating AI-powered SEO and marketing insights
+    """
     
     def __init__(self):
+        # Read from environment only; no hardcoded default
         load_dotenv()
         self.api_key = os.environ.get('ANTHROPIC_API_KEY')  
         
         if not self.api_key:
             print("Warning: No Anthropic API key found. AI insights will use mock data.")
         else:
+            # Configure the Anthropic client
             self.client = anthropic.Anthropic(api_key=self.api_key)
             
+        # Set the model name
         self.model_name = "claude-sonnet-4-5-20250929"
     
     async def generate_seo_insights(self, seo_data: Dict[str, Any]) -> Dict[str, Any]:
-
+        """
+        Generate AI-powered SEO insights and recommendations
+        
+        Args:
+            seo_data: SEO analysis data from SEOAnalyzer
+            
+        Returns:
+            Dictionary containing GPT-generated insights
+        """
         
         if not self.api_key:
             return self._generate_mock_seo_insights(seo_data)
         
+        # Prepare prompt for GPT
         prompt = self._create_seo_analysis_prompt(seo_data)
         
         try:
-            response = await self._call_ai_api(prompt, max_tokens=5000)
+            # Call Anthropic API with token tracking
+            response = await self._call_ai_api(prompt, max_tokens=5000, operation="seo_analysis")
             
+            # Parse and structure the response
             insights = self._parse_seo_insights(response)
             
             return {
@@ -48,7 +66,15 @@ class GPTInsightsService:
             return self._generate_mock_seo_insights(seo_data)
     
     async def generate_social_insights(self, social_data: Dict[str, Any]) -> Dict[str, Any]:
-
+        """
+        Generate AI-powered social media insights
+        
+        Args:
+            social_data: Social media analysis data
+            
+        Returns:
+            Dictionary containing social media insights
+        """
         
         if not self.api_key:
             return self._generate_mock_social_insights(social_data)
@@ -56,7 +82,7 @@ class GPTInsightsService:
         prompt = self._create_social_analysis_prompt(social_data)
         
         try:
-            response = await self._call_ai_api(prompt, max_tokens=5000)
+            response = await self._call_ai_api(prompt, max_tokens=5000, operation="social_analysis")
             
             return {
                 "url": social_data.get("url"),
@@ -72,12 +98,23 @@ class GPTInsightsService:
             return self._generate_mock_social_insights(social_data)
     
     async def generate_comprehensive_report(self, seo_data: Dict[str, Any], social_data: List[Dict[str, Any]], branding_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Generate a comprehensive marketing report combining SEO, social media, and branding insights
+        
+        Args:
+            seo_data: SEO analysis results
+            social_data: List of social media analysis results
+            branding_data: Branding analysis results
+            
+        Returns:
+            Comprehensive marketing insights report
+        """
         
         prompt = self._create_comprehensive_report_prompt(seo_data, social_data, branding_data)
         
         try:
             if self.api_key:
-                response = await self._call_ai_api(prompt, max_tokens=5000)
+                response = await self._call_ai_api(prompt, max_tokens=5000, operation="comprehensive_report")
                 comprehensive_insights = self._parse_comprehensive_insights(response)
             else:
                 comprehensive_insights = self._generate_mock_comprehensive_insights(branding_data)
@@ -97,34 +134,91 @@ class GPTInsightsService:
         except Exception as e:
             print(f"Error generating comprehensive report: {str(e)}")
             return self._generate_mock_comprehensive_report(seo_data, social_data, branding_data)
-    
-    async def _call_ai_api(self, prompt: str, max_tokens: int = 5000) -> str:
+    def _get_optimal_max_tokens(self, operation: str) -> int:
+        """Return optimal max_tokens based on operation type"""
+        token_map = {
+            "seo_analysis": 3500,  # Reduced from 5000
+            "social_analysis": 3500,  # Reduced from 5000
+            "branding_analysis": 3500,  # Reduced from 5000
+            "sentiment_analysis": 3500,  # Reduced from 5000
+            "comprehensive_report": 3500,  # Reduced from 5000
+            "competitive_suggestions": 3500,  # Reduced from 2000
+            "ai_analysis": 3500
+        }
+        return token_map.get(operation, 1500)  
+    async def _call_ai_api(self, prompt: str, max_tokens: int = 3500, operation: str = "ai_analysis", cache_system_prompt: bool = True) -> str:
+        """
+        Call Anthropic Claude API with prompt caching enabled
         
+        Prompt caching can reduce costs by 90% for cached input tokens and 10% for cached output tokens.
+        Best for: repeated analysis patterns, system prompts, large reference data
+        """
         try:
-            system_message = "You are an expert SEO and digital marketing consultant. Provide actionable, data-driven insights and recommendations."
+            # Standard system message that can be cached
+            system_message = """You are an expert SEO and digital marketing consultant. Provide actionable, data-driven insights and recommendations.
+
+    Analysis Framework:
+    - Focus on measurable metrics and KPIs
+    - Prioritize recommendations by impact and effort
+    - Provide specific, actionable steps
+    - Consider cross-platform opportunities
+    - Base insights on data patterns"""
             
-            response = await asyncio.to_thread(
-                self.client.messages.create,
+            # Prepare messages with cache control
+            messages = []
+            
+            # Add system message with cache control if enabled
+            if cache_system_prompt:
+                messages.append({
+                    "role": "system", 
+                    "content": system_message,
+                    "cache_control": {"type": "ephemeral"}  # Cache this system prompt
+                })
+            else:
+                messages.append({
+                    "role": "system", 
+                    "content": system_message
+                })
+            
+            # Add user prompt
+            messages.append({
+                "role": "user", 
+                "content": prompt
+            })
+            
+            # Get optimal token allocation
+            optimal_tokens = self._get_optimal_max_tokens(operation)
+            max_tokens = min(max_tokens, optimal_tokens)
+            
+            # Map operation to MLflow experiment
+            experiment_map = {
+                "seo_analysis": "seo_analysis",
+                "social_analysis": "social_analysis",
+                "branding_analysis": "branding_analysis",
+                "sentiment_analysis": "sentiment_analysis",
+                "comprehensive_report": "comprehensive_report",
+                "ai_analysis": "ai_general"
+            }
+            experiment_name = experiment_map.get(operation, "ai_general")
+
+            # Track with token monitor
+            result = await token_monitor.track_anthropic_call(
+                operation=operation,
                 model=self.model_name,
+                messages=messages,
                 max_tokens=max_tokens,
-                temperature=0.7,
-                system=system_message,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ]
+                experiment_name=experiment_name
             )
             
-            return response.content[0].text
-            
+            return result["response"]
         except Exception as e:
             print(f"Anthropic API error: {str(e)}")
             raise Exception(f"Anthropic API error: {str(e)}")
     
     def _create_seo_analysis_prompt(self, seo_data: Dict[str, Any]) -> str:
+        """Create prompt for SEO analysis"""
         
+        # Extract page speed scores
         page_speed_scores = seo_data.get('page_speed_scores', {})
         performance = page_speed_scores.get('performance', 'N/A')
         accessibility = page_speed_scores.get('accessibility', 'N/A')
@@ -164,6 +258,7 @@ class GPTInsightsService:
         """
     
     def _create_social_analysis_prompt(self, social_data: Dict[str, Any]) -> str:
+        """Create prompt for social media analysis"""
         
         profile_data = social_data.get('profile_data', {})
         platform = social_data.get('platform', 'unknown')
@@ -192,6 +287,7 @@ class GPTInsightsService:
         """
     
     def _create_comprehensive_report_prompt(self, seo_data: Dict[str, Any], social_data: List[Dict[str, Any]], branding_data: Optional[Dict[str, Any]] = None) -> str:
+        """Create prompt for comprehensive marketing report with detailed SEO and social data"""
         page_speed_scores = seo_data.get('page_speed_scores', {})
         performance = page_speed_scores.get('performance', 'N/A')
         accessibility = page_speed_scores.get('accessibility', 'N/A')
@@ -199,6 +295,7 @@ class GPTInsightsService:
         seo_score = page_speed_scores.get('seo', 'N/A')
         overall = page_speed_scores.get('overall', 'N/A')
         print(page_speed_scores)
+        # Format social profiles information
         social_profiles = []
         for profile in social_data:
             platform = profile.get('platform', 'unknown')
@@ -219,6 +316,7 @@ class GPTInsightsService:
             
             social_profiles.append(profile_info)
         
+        # Format headings structure
         headings_structure = ""
         headings = seo_data.get('headings')
 
@@ -239,10 +337,12 @@ class GPTInsightsService:
         else:
             headings_structure += "\n      No heading data found."
 
+        # Add branding data if available
         branding_summary = "Not analyzed."
         if branding_data and "branding_analysis" in branding_data:
             branding_summary = branding_data["branding_analysis"].get("executive_summary", "No summary available.")
 
+        # Format schema markup
         schema_markup = ""
         schema_data = seo_data.get('schema_markup')
         if isinstance(schema_data, list):
@@ -252,6 +352,7 @@ class GPTInsightsService:
         elif schema_data:
             schema_markup = f"\n      - {schema_data}"
 
+        # Format Open Graph tags
         og_tags = ""
         og_data = seo_data.get('og_tags')
         if isinstance(og_data, dict):
@@ -261,6 +362,7 @@ class GPTInsightsService:
         elif og_data:
             og_tags = f"\n      - {og_data}"
 
+        # Format social links
         social_links = ""
         social_links_data = seo_data.get('social_links')
         if isinstance(social_links_data, dict):
@@ -270,6 +372,7 @@ class GPTInsightsService:
         elif social_links_data:
             social_links = f"\n      - {social_links_data}"
 
+        # Return final prompt
         return f"""
         Create a comprehensive digital marketing analysis report based on the following detailed data:
 
@@ -317,18 +420,21 @@ class GPTInsightsService:
         """
         
     def _parse_seo_insights(self, response: str) -> Dict[str, Any]:
+        """Parse GPT response for SEO insights"""
         return {
             "summary": response[:200] + "..." if len(response) > 200 else response,
             "full_analysis": response
         }
     
     def _parse_social_insights(self, response: str) -> Dict[str, Any]:
+        """Parse GPT response for social insights"""
         return {
             "summary": response[:200] + "..." if len(response) > 200 else response,
             "full_analysis": response
         }
     
     def _parse_comprehensive_insights(self, response: str) -> Dict[str, Any]:
+        """Parse comprehensive report response"""
         lines = response.split('\n')
         
         insights = {
@@ -366,6 +472,7 @@ class GPTInsightsService:
         return insights
     
     def _extract_recommendations(self, response: str) -> List[str]:
+        """Extract recommendations from GPT response"""
         recommendations = []
         lines = response.split('\n')
         
@@ -374,11 +481,13 @@ class GPTInsightsService:
             if line.startswith(('•', '-', '*')) or line[0:2].isdigit():
                 recommendations.append(line)
         
-        return recommendations[:10] 
+        return recommendations[:10]  # Limit to top 10
     
     def _calculate_priority_score(self, seo_data: Dict[str, Any]) -> int:
+        """Calculate priority score based on SEO issues"""
         score = 100
         
+        # Deduct points for various issues
         if not seo_data.get('https'):
             score -= 20
         if not seo_data.get('title'):
@@ -397,9 +506,11 @@ class GPTInsightsService:
         return max(0, score)
     
     def _calculate_seo_score(self, seo_data: Dict[str, Any]) -> int:
+        """Calculate overall SEO score"""
         return self._calculate_priority_score(seo_data)
     
     def _identify_improvement_areas(self, seo_data: Dict[str, Any]) -> List[str]:
+        """Identify key improvement areas"""
         areas = []
         
         if not seo_data.get('https'):
@@ -421,6 +532,7 @@ class GPTInsightsService:
         return areas
     
     def _identify_technical_issues(self, seo_data: Dict[str, Any]) -> List[str]:
+        """Identify technical SEO issues"""
         issues = []
         
         if not seo_data.get('https'):
@@ -433,6 +545,7 @@ class GPTInsightsService:
         return issues
     
     def _extract_content_strategy(self, response: str) -> List[str]:
+        """Extract content strategy suggestions"""
         strategies = []
         lines = response.split('\n')
         
@@ -443,6 +556,7 @@ class GPTInsightsService:
         return strategies[:5]
     
     def _identify_engagement_opportunities(self, social_data: Dict[str, Any]) -> List[str]:
+        """Identify engagement opportunities"""
         opportunities = []
         
         profile_data = social_data.get('profile_data', {})
@@ -460,11 +574,13 @@ class GPTInsightsService:
         return opportunities
     
     def _create_competitive_analysis_prompt(self, social_data: Dict[str, Any]) -> str:
+        """Create prompt for competitive analysis suggestions"""
         profile_data = social_data.get('profile_data', {})
         content_analysis = social_data.get('content_analysis', {})
         platform = social_data.get('platform', 'unknown')
         user_country = social_data.get('user_country', '')
         
+        # Create country-specific context
         country_context = ""
         if user_country:
             country_context = f"Target Market/Country: {user_country}\n        "
@@ -513,25 +629,34 @@ class GPTInsightsService:
         """
     
     def _repair_json_string(self, json_str: str) -> str:
+        """Repair common JSON formatting issues"""
         try:
+            # Check if JSON is already valid
             json.loads(json_str)
             return json_str
         except json.JSONDecodeError:
             pass
         
+        # Fix unterminated strings
         if json_str.count('"') % 2 != 0:
+            # Find the last quote and see if it's part of an unterminated string
             last_quote = json_str.rfind('"')
             if last_quote > 0:
+                # Look for the pattern: "key": "value that got cut off
                 before_quote = json_str[:last_quote]
                 if before_quote.endswith(': '):
+                    # This looks like an unterminated value, close it
                     json_str = before_quote + '""'
                 else:
+                    # Try to find the last complete key-value pair
                     last_complete = json_str.rfind('",', 0, last_quote)
                     if last_complete > 0:
                         json_str = json_str[:last_complete + 1]
                     else:
+                        # Close the string
                         json_str = json_str[:last_quote] + '"'
         
+        # Ensure proper JSON structure closure
         open_braces = json_str.count('{')
         close_braces = json_str.count('}')
         if open_braces > close_braces:
@@ -545,36 +670,49 @@ class GPTInsightsService:
         return json_str
     
     def _extract_competitive_suggestions(self, response: str) -> List[Dict[str, str]]:
+        """Extract competitive suggestions from AI JSON response"""
         try:
+            # Check if response is empty or None
             if not response or not response.strip():
                 print("Empty response received from AI")
                 return self._generate_mock_competitive_suggestions({})
             
+            # Clean the response more thoroughly
             cleaned_response = response.strip()
             
+            # Remove markdown code blocks more robustly
             if '```json' in cleaned_response:
+                # Find the start after ```json
                 start = cleaned_response.find('```json') + 7
+                # Find the closing ```
                 end = cleaned_response.find('```', start)
                 if end != -1:
                     cleaned_response = cleaned_response[start:end].strip()
                 else:
+                    # If no closing ```, take everything after ```json
                     cleaned_response = cleaned_response[start:].strip()
             elif cleaned_response.startswith('```'):
+                # Handle generic ``` blocks
                 start = cleaned_response.find('```') + 3
                 end = cleaned_response.find('```', start)
                 if end != -1:
                     cleaned_response = cleaned_response[start:end].strip()
                 else:
+                    # If no closing ```, take everything after ```
                     cleaned_response = cleaned_response[start:].strip()
             
+            # Additional cleaning for any remaining markdown artifacts
             cleaned_response = cleaned_response.replace('```json', '').replace('```', '').strip()
             
+            # Check if we have any content after cleaning
             if not cleaned_response or len(cleaned_response.strip()) == 0:
                 print("No content after cleaning markdown")
                 return self._generate_mock_competitive_suggestions({})
             
+            # Try to find JSON object in the response
             if '{' in cleaned_response and '}' in cleaned_response:
                 start = cleaned_response.find('{')
+                # Find the matching closing brace
                 brace_count = 0
                 end = start
                 for i, char in enumerate(cleaned_response[start:], start):
@@ -592,32 +730,44 @@ class GPTInsightsService:
                 print("No JSON structure found in response")
                 return self._extract_suggestions_fallback(response)
             
+            # Fix common JSON issues more aggressively
+            # Escape any unescaped quotes within string values
             cleaned_response = re.sub(r'(?<!\\)"(?=[^:,\]}])', r'\\"', cleaned_response)
+            # Fix newlines within JSON strings
             cleaned_response = re.sub(r':\s*"([^"]*)\n([^"]*)"', r': "\1 \2"', cleaned_response)
+            # Remove problematic characters that break JSON strings
             cleaned_response = re.sub(r'[\x00-\x1f\x7f-\x9f]', ' ', cleaned_response)
+            # Fix multiple spaces
             cleaned_response = re.sub(r'\s+', ' ', cleaned_response)
             
+            # Debug: Show what we're trying to parse
             print(f"Attempting to parse JSON (length: {len(cleaned_response)}):")
             print(f"First 200 chars: {cleaned_response[:200]}")
             
+            # Try a different approach - use a more lenient JSON parser
             try:
+                # First attempt with the cleaned response
                 data = json.loads(cleaned_response)
                 suggestions = data.get('suggestions', [])
             except json.JSONDecodeError as e:
                 print(f"First JSON parse failed: {e}")
+                # If that fails, try to repair the JSON
                 cleaned_response = self._repair_json_string(cleaned_response)
                 print(f"Repaired JSON length: {len(cleaned_response)}")
                 data = json.loads(cleaned_response)
                 suggestions = data.get('suggestions', [])
             
+            # Validate and clean suggestions
             validated_suggestions = []
-            for suggestion in suggestions[:6]:
+            for suggestion in suggestions[:6]:  # Limit to 6 suggestions
                 if isinstance(suggestion, dict) and suggestion.get('title'):
+                    # Clean string values by removing problematic characters
                     def clean_string(s):
                         if not isinstance(s, str):
                             return str(s)
                         return re.sub(r'[\x00-\x1f\x7f-\x9f]', ' ', s).strip()
                     
+                    # Ensure all required fields exist with defaults
                     validated_suggestion = {
                         'title': clean_string(suggestion.get('title', 'Untitled Suggestion')),
                         'priority': clean_string(suggestion.get('priority', 'MEDIUM')).upper(),
@@ -630,6 +780,7 @@ class GPTInsightsService:
                     }
                     validated_suggestions.append(validated_suggestion)
             
+            # If no valid suggestions were found, use fallback
             if not validated_suggestions:
                 print("No valid suggestions found in JSON response")
                 return self._extract_suggestions_fallback(response)
@@ -640,6 +791,7 @@ class GPTInsightsService:
             print(f"Error parsing competitive suggestions JSON: {str(e)}")
             print(f"Cleaned response length: {len(cleaned_response) if 'cleaned_response' in locals() else 'N/A'}")
             print(f"Using fallback extraction method...")
+            # Fallback to simple text extraction - this is working well!
             fallback_suggestions = self._extract_suggestions_fallback(response)
             if fallback_suggestions:
                 print(f"Fallback method successfully extracted {len(fallback_suggestions)} suggestions")
@@ -649,9 +801,11 @@ class GPTInsightsService:
                 return self._generate_mock_competitive_suggestions(social_data)
     
     def _extract_suggestions_fallback(self, response: str) -> List[Dict[str, str]]:
+        """Fallback method to extract suggestions from non-JSON response"""
         suggestions = []
         
-
+        # If the response looks like it has JSON structure but failed to parse,
+        # try to extract titles manually
         if '"title"' in response:
             title_matches = re.findall(r'"title":\s*"([^"]+)"', response)
             for i, title in enumerate(title_matches[:6]):
@@ -667,15 +821,18 @@ class GPTInsightsService:
                 }
                 suggestions.append(suggestion)
         else:
+            # Traditional line-by-line parsing
             lines = response.split('\n')
             
             for line in lines:
                 line = line.strip()
+                # Look for numbered items, bullet points, or lines with competitive keywords
                 if (line.startswith(('•', '-', '*')) or 
                     line[0:2].isdigit() or 
                     any(keyword in line.lower() for keyword in ['competitor', 'benchmark', 'analyze', 'study', 'research', 'compare'])):
+                    # Clean up the line
                     cleaned_line = line.lstrip('•-*0123456789. ')
-                    if len(cleaned_line) > 10:
+                    if len(cleaned_line) > 10:  # Filter out very short lines
                         suggestion = {
                             'title': cleaned_line,
                             'priority': 'MEDIUM',
@@ -688,12 +845,14 @@ class GPTInsightsService:
                         }
                         suggestions.append(suggestion)
         
+        # If we still don't have suggestions, return some defaults
         if not suggestions:
             suggestions = self._generate_mock_competitive_suggestions({})
         
-        return suggestions[:6]
+        return suggestions[:6]  # Limit to top 6 suggestions
     
     def _generate_mock_competitive_suggestions(self, social_data: Dict[str, Any]) -> List[Dict[str, str]]:
+        """Generate mock competitive suggestions when AI is unavailable"""
         platform = social_data.get('platform', 'social media')
         user_country = social_data.get('user_country', '')
         country_suffix = f" in {user_country}" if user_country else ""
@@ -761,13 +920,39 @@ class GPTInsightsService:
             }
         ]
     
+    # async def _generate_competitive_suggestions(self, social_data: Dict[str, Any]) -> List[Dict[str, str]]:
+    #     """Generate AI-powered competitive analysis suggestions"""
+    #     if not self.api_key:
+    #         print("No API key available, using mock competitive suggestions")
+    #         return self._generate_mock_competitive_suggestions(social_data)
+        
+    #     prompt = self._create_competitive_analysis_prompt(social_data)
+        
+    #     try:
+    #         print("Calling AI API for competitive suggestions...")
+    #         response = await self._call_ai_api(prompt, max_tokens=2000)
+    #         print(f"AI API response length: {len(response) if response else 0}")
+            
+    #         if not response:
+    #             print("Empty response from AI API, using mock suggestions")
+    #             return self._generate_mock_competitive_suggestions(social_data)
+            
+    #         suggestions = self._extract_competitive_suggestions(response)
+    #         print(f"Extracted {len(suggestions)} competitive suggestions")
+    #         return suggestions
+            
+    #     except Exception as e:
+    #         print(f"Anthropic API error in competitive suggestions: {str(e)}")
+    #         return self._generate_mock_competitive_suggestions(social_data)
     
     def format_competitive_suggestions_for_display(self, suggestions: List[Dict[str, str]]) -> str:
+        """Format competitive suggestions for better display"""
         if not suggestions:
             return "No competitive suggestions available."
         
         formatted_output = "## 🎯 Competitive Analysis Strategy\n\n"
         
+        # Group by priority
         high_priority = [s for s in suggestions if s.get('priority', '').upper() == 'HIGH']
         medium_priority = [s for s in suggestions if s.get('priority', '').upper() == 'MEDIUM']
         low_priority = [s for s in suggestions if s.get('priority', '').upper() == 'LOW']
@@ -797,14 +982,17 @@ class GPTInsightsService:
         return formatted_output
     
     def get_competitive_suggestions_summary(self, suggestions: List[Dict[str, str]]) -> Dict[str, Any]:
+        """Get a summary of competitive suggestions"""
         if not suggestions:
             return {"total": 0, "by_priority": {}, "by_category": {}}
         
+        # Count by priority
         priority_counts = {}
         for suggestion in suggestions:
             priority = suggestion.get('priority', 'MEDIUM').upper()
             priority_counts[priority] = priority_counts.get(priority, 0) + 1
         
+        # Count by category
         category_counts = {}
         for suggestion in suggestions:
             category = suggestion.get('category', 'General')
@@ -818,9 +1006,11 @@ class GPTInsightsService:
         }
     
     def _calculate_average_timeline(self, suggestions: List[Dict[str, str]]) -> str:
+        """Calculate average timeline from suggestions"""
         timelines = []
         for suggestion in suggestions:
             timeline = suggestion.get('timeline', '2-4 weeks')
+            # Extract numbers from timeline (e.g., "1-2 weeks" -> [1, 2])
             numbers = re.findall(r'\d+', timeline)
             if numbers:
                 avg = sum(int(n) for n in numbers) / len(numbers)
@@ -832,20 +1022,24 @@ class GPTInsightsService:
         return "2-3 weeks average"
     
     def convert_competitive_suggestions_to_strings(self, suggestions: List[Dict[str, str]]) -> List[str]:
+        """Convert structured competitive suggestions to simple strings for frontend compatibility"""
         if not suggestions:
             return []
         
         converted_suggestions = []
         for suggestion in suggestions:
             if isinstance(suggestion, dict):
+                # Just use the title as it's already descriptive and actionable
                 title = suggestion.get('title', 'Competitive Analysis Suggestion')
                 converted_suggestions.append(title)
             elif isinstance(suggestion, str):
+                # Already a string, keep as is
                 converted_suggestions.append(suggestion)
         
         return converted_suggestions
     
     def _generate_benchmarks(self, seo_data: Dict[str, Any], social_data: List[Dict[str, Any]], branding_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Generate performance benchmarks"""
         page_speed_scores = seo_data.get('page_speed_scores', {})
         seo_score = page_speed_scores.get('seo', 'N/A')
         overall = page_speed_scores.get('overall', 'N/A')
@@ -864,7 +1058,9 @@ class GPTInsightsService:
             "branding_consistency": branding_score
         }
     
+    # Mock data generators for when GPT API is not available
     def _generate_mock_seo_insights(self, seo_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate mock SEO insights when GPT API is unavailable"""
         return {
             "url": seo_data.get("url"),
             "generated_at": datetime.now().isoformat(),
@@ -883,6 +1079,7 @@ class GPTInsightsService:
         }
     
     def _generate_mock_social_insights(self, social_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate mock social media insights"""
         return {
             "url": social_data.get("url"),
             "platform": social_data.get("platform"),
@@ -902,6 +1099,7 @@ class GPTInsightsService:
         }
     
     def _generate_mock_comprehensive_insights(self, branding_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Generate mock comprehensive insights"""
         summary = "Your digital presence shows strong potential with opportunities for growth through improved SEO optimization and enhanced social media engagement."
         if branding_data:
             summary += " Branding is a key area for improvement."
@@ -935,6 +1133,7 @@ class GPTInsightsService:
         }
     
     def _generate_mock_comprehensive_report(self, seo_data: Dict[str, Any], social_data: List[Dict[str, Any]], branding_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Generate mock comprehensive report"""
         insights = self._generate_mock_comprehensive_insights(branding_data)
         return {
             "generated_at": datetime.now().isoformat(),
@@ -945,15 +1144,24 @@ class GPTInsightsService:
         }
 
     async def generate_branding_insights(self, screenshots: List[Dict[str, Any]], branding_profile: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-
+        """
+        Generate AI-powered branding insights from screenshots.
+        
+        Args:
+            screenshots: A list of dictionaries, where each dictionary contains a URL and a base64-encoded screenshot.
+            branding_profile: Optional company branding profile with logo and colors for comparison.
+            
+        Returns:
+            A dictionary containing the branding analysis.
+        """
         if not self.api_key:
             return self._generate_mock_branding_insights()
 
         prompt = self._create_branding_analysis_prompt(branding_profile)
         
         try:
+            # Prepare content with text prompt and images for Claude
             content = [{"type": "text", "text": prompt}]
-            
             for item in screenshots:
                 image_format = item.get("format", "png")
                 media_type = f"image/{image_format}"
@@ -966,21 +1174,19 @@ class GPTInsightsService:
                     }
                 })
 
-            response = await asyncio.to_thread(
-                self.client.messages.create,
+            # Route through token monitor so MLflow logs under branding_analysis
+            tm_result = await token_monitor.track_anthropic_call(
+                operation="branding_analysis",
                 model=self.model_name,
-                max_tokens=5000,
-                temperature=0.7,
-                system="You are an expert in branding and visual design. Analyze the provided screenshots and provide comprehensive brand audit insights.",
                 messages=[
-                    {
-                        "role": "user",
-                        "content": content
-                    }
-                ]
+                    {"role": "system", "content": "You are an expert in branding and visual design. Analyze the provided screenshots and provide comprehensive brand audit insights."},
+                    {"role": "user", "content": content}
+                ],
+                max_tokens=5000,
+                experiment_name="branding_analysis"
             )
-            
-            insights = self._parse_branding_insights(response.content[0].text)
+
+            insights = self._parse_branding_insights(tm_result["response"])
             return insights
 
         except Exception as e:
@@ -988,6 +1194,7 @@ class GPTInsightsService:
             return self._generate_mock_branding_insights()
 
     def _create_branding_analysis_prompt(self, branding_profile: Optional[Dict[str, Any]] = None) -> str:
+        """Creates a prompt for the branding analysis LLM."""
         base_prompt = """
         As an expert in branding and visual design, analyze the provided screenshot(s) of a company's web presence (website or social media). 
         
@@ -1019,6 +1226,7 @@ class GPTInsightsService:
         Be insightful, professional, and provide actionable recommendations.
         """
         
+        # Add branding profile context if available
         if branding_profile:
             profile_context = "\n\nIMPORTANT: The company has provided their official branding profile for comparison:\n"
             
@@ -1047,6 +1255,9 @@ class GPTInsightsService:
         return base_prompt
 
     def _generate_mock_branding_insights(self) -> Dict[str, Any]:
+        """
+        Generates mock data for branding analysis, structured like the user's example.
+        """
         return {
             "executive_summary": "This is a mock executive summary for the brand audit of Seayou Camp. The analysis reveals a friendly and adventure-oriented brand identity, but there are significant inconsistencies in visual branding and content strategy that need to be addressed.",
             "overall_brand_impression": {
@@ -1108,14 +1319,28 @@ class GPTInsightsService:
         }
 
     def _parse_branding_insights(self, response: str) -> Dict[str, Any]:
+        """
+        Parses the JSON response from the branding analysis LLM.
+        """
         try:
+            # The response might be wrapped in markdown JSON
             cleaned_response = response.strip().replace("```json", "").replace("```", "")
             return json.loads(cleaned_response)
         except json.JSONDecodeError:
             print("Error: Failed to decode JSON from branding analysis response.")
+            # Fallback to returning the raw text in a structured way
             return {"executive_summary": "Could not parse the analysis.", "raw_response": response}
 
     async def generate_sentiment_insights(self, sentiment_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate AI-powered insights for sentiment analysis
+        
+        Args:
+            sentiment_data: Dictionary containing sentiment analysis data and summary
+            
+        Returns:
+            Dictionary with AI insights for sentiment analysis
+        """
         if not self.api_key:
             return self._generate_mock_sentiment_insights(sentiment_data)
         
@@ -1136,12 +1361,14 @@ class GPTInsightsService:
             return self._generate_mock_sentiment_insights(sentiment_data)
 
     def _create_sentiment_analysis_prompt(self, sentiment_data: Dict[str, Any]) -> str:
+        """Create prompt for sentiment analysis insights"""
         
         summary = sentiment_data.get("summary", {})
         sample_reviews = sentiment_data.get("sample_reviews", [])
         sentiment_distribution = summary.get("sentiment_percentages", {})
         avg_star_rating = summary.get("average_star_rating", 0)
         
+        # Format sample reviews
         reviews_text = ""
         for i, review in enumerate(sample_reviews[:5]):
             reviews_text += f"\n{i+1}. Rating: {review.get('Star Rating', 'N/A')}/5\n"
@@ -1176,12 +1403,14 @@ class GPTInsightsService:
         """
 
     def _parse_sentiment_insights(self, response: str) -> Dict[str, Any]:
+        """Parse GPT response for sentiment insights"""
         return {
             "summary": response[:300] + "..." if len(response) > 300 else response,
             "full_analysis": response
         }
 
     def _extract_sentiment_recommendations(self, response: str) -> List[str]:
+        """Extract recommendations from sentiment analysis response"""
         recommendations = []
         lines = response.split('\n')
         
@@ -1190,9 +1419,10 @@ class GPTInsightsService:
             if line.startswith(('•', '-', '*')) or line[0:2].isdigit():
                 recommendations.append(line)
         
-        return recommendations[:8] 
+        return recommendations[:8]  # Limit to top 8
 
     def _extract_sentiment_action_items(self, response: str) -> List[str]:
+        """Extract action items from sentiment analysis response"""
         action_items = []
         lines = response.split('\n')
         
@@ -1201,9 +1431,10 @@ class GPTInsightsService:
             if any(keyword in line.lower() for keyword in ['action', 'implement', 'address', 'fix', 'improve']):
                 action_items.append(line)
         
-        return action_items[:5]
+        return action_items[:5]  # Limit to top 5
 
     def _generate_mock_sentiment_insights(self, sentiment_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate mock sentiment insights when GPT API is unavailable"""
         summary = sentiment_data.get("summary", {})
         sentiment_distribution = summary.get("sentiment_percentages", {})
         

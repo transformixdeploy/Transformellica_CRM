@@ -79,9 +79,31 @@ services:
       - DEBUG=${DEBUG}
     ports:
       - "${FLASK_DIGITAL_ANALYSIS_PORT}:${FLASK_DIGITAL_ANALYSIS_PORT}"
+    depends_on:
+      - mlflow_server
     restart: unless-stopped
     volumes:
       - wdm_cache:/app/.wdm
+      - mlflow-tracking:/mlruns
+
+  mlflow_server:
+    build:
+      context: ./mlflow_server
+      dockerfile: ./Dockerfile
+      args:
+        - PORT=${ML_FLOW_PORT}
+    container_name: mlflow_server
+    environment:
+      - PORT=${ML_FLOW_PORT}
+      - MLFLOW_BACKEND_STORE_URI=${MLFLOW_BACKEND_STORE_URI}
+      - MLFLOW_DEFAULT_ARTIFACT_ROOT=${MLFLOW_DEFAULT_ARTIFACT_ROOT}
+      - MLFLOW_HOST=${MLFLOW_HOST}
+    ports:
+      - "${ML_FLOW_PORT}:${ML_FLOW_PORT}"
+    volumes:
+      - mlflow-tracking:/app/mlruns
+      - mlflow-artifacts:/app/mlartifacts
+    restart: unless-stopped
   
   nginx:
     image: nginx:alpine
@@ -144,3 +166,5 @@ volumes:
   certbot-etc:
   certbot-var:
   wdm_cache: 
+  mlflow-tracking:
+  mlflow-artifacts:

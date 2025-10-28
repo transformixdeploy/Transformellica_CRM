@@ -22,3 +22,8 @@ streamlit
 webdriver-manager>=4.0.0
 torch>=2.2.0
 flask_cors
+mlflow>=2.8.0
+langgraph>=0.0.40
+langchain>=0.1.0
+langchain-anthropic>=0.1.0
+tiktoken>=0.5.0
