@@ -1,7 +1,10 @@
 "use client";
+
 import { createContext, useState, ReactNode, useEffect } from "react";
 import { jwtDecode } from "jwt-decode";
 import {logout, refresh} from "@/utilities/axiosRequester";
+import { AxiosError } from "axios";
+import { apiClient } from "@/utilities/axiosApiClient";
 
 enum Roles {
   client = "client",
@@ -45,6 +48,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log("new access token is generated");
     } catch (error) {
       await logout();
+      setAccessToken(null);
     } finally {
       setIsLoading(false);
     }
@@ -57,6 +61,72 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
     }
   }, [])
+
+  // Add request interceptor (re-add on accessToken change to capture latest value)
+  useEffect(() => {
+    const requestInterceptor = apiClient.interceptors.request.use((config) => {
+      
+
+      if (accessToken && !(config as any)._retry) {
+        console.log("Attaching access token to the request headers");
+        console.log(`Token: ${accessToken}`);
+        config.headers.Authorization = `Bearer ${accessToken}`;
+      }
+      return config;
+    });
+
+    return () => {
+      apiClient.interceptors.request.eject(requestInterceptor);
+    };
+  }, [accessToken]);
+
+  // Add response interceptor (once on mount)
+  useEffect(() => {
+    const responseInterceptor = apiClient.interceptors.response.use(
+      (response) => response,
+      async (error: AxiosError) => {
+        const originalRequest: any = error.config;
+
+        // If 401/403 and not retried yet → refresh token
+        if ((error.response?.status === 401 || error.response?.status === 403) && !originalRequest._retry) {
+          console.log("Access token is expired, let's try to refresh it");
+          
+          originalRequest._retry = true;
+
+          try {
+            // Get new token using refresh cookie
+            const refreshResponse = await refresh();
+            const newAccessToken = refreshResponse.data.accessToken;
+            
+            console.log("New access token generated.");
+            console.log(`New access token aloo: ${newAccessToken}`);
+            
+            setAccessToken(newAccessToken);
+            
+            // Update header and retry
+            originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
+            console.log("Retrying the request.");
+            return await apiClient(originalRequest);
+
+          } catch (refreshError) {
+            console.log("Access token refresh failed → Logging out...");
+            await logout();
+            setAccessToken(null);
+            window.location.href = "/";
+            return Promise.reject(refreshError);
+          }
+        }
+
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      apiClient.interceptors.response.eject(responseInterceptor);
+    };
+  }, []); // Empty deps: run once
+
+  console.log("Interceptors are initialized");
 
 
   return (

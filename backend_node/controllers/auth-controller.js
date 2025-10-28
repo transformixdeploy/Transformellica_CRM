@@ -29,14 +29,14 @@ const register = asyncWrapper(
             role: createdUser.role,
             email: createdUser.email,
             fullName: createdUser.fullName
-        }, process.env.JWT_SECRET_KEY, {expiresIn: "15m"});
+        }, process.env.JWT_SECRET_KEY, {expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRE_TIME});
         
         // Create refresh token
         const refreshToken = jwt.sign({
             role: createdUser.role,
             email: createdUser.email,
             fullName: createdUser.fullName
-        }, process.env.JWT_SECRET_KEY, {expiresIn: "7d"});
+        }, process.env.JWT_SECRET_KEY, {expiresIn: process.env.JWT_REFRESH_TOKEN_EXPIRE_TIME});
 
         // set refresh token as httpOnly cookie
         res.cookie("refreshToken", refreshToken, {
@@ -70,14 +70,14 @@ const login = asyncWrapper(
             role: user.role,
             email: user.email,
             fullName: user.fullName
-        }, process.env.JWT_SECRET_KEY, {expiresIn: "15m"});
+        }, process.env.JWT_SECRET_KEY, {expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRE_TIME});
         
         // Create refresh token
         const refreshToken = jwt.sign({
             role: user.role,
             email: user.email,
             fullName: user.fullName
-        }, process.env.JWT_SECRET_KEY, {expiresIn: "7d"});
+        }, process.env.JWT_SECRET_KEY, {expiresIn: process.env.JWT_REFRESH_TOKEN_EXPIRE_TIME});
     
         // set refresh token as httpOnly cookie
         res.cookie("refreshToken", refreshToken, {
@@ -105,7 +105,7 @@ const refresh = asyncWrapper(
                 role : decoded.role,
                 fullName: decoded.fullName,
                 email: decoded.email
-            }, process.env.JWT_SECRET_KEY, {expiresIn: "15m"});
+            }, process.env.JWT_SECRET_KEY, {expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRE_TIME});
 
             JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {accessToken});
         } catch (error) {

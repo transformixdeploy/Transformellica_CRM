@@ -8,7 +8,6 @@ import ValuePropositionSection from '../components/ValuePropositionSection';
 import BenefitsSection from '../components/BenefitsSection';
 import SocialProofSection from '../components/SocialProofSection';
 import CtaSection from '../components/CtaSection';
-import { Button } from '@/components/ui/button';
 
 const HomePage = () => {
   const [analysingWeb, setAnalysingWeb] = useState(false);
