@@ -5,7 +5,7 @@ import asyncio
 import base64
 import io
 from PIL import Image
-
+from datetime import datetime
 from seo_analyzer import SEOAnalyzer
 from gpt_insights_service import GPTInsightsService
 from helpers import is_valid_url, validate_url
@@ -101,10 +101,12 @@ def website_swot_analysis():
         website_url = validate_url(website_url)
         if not is_valid_url(website_url):
             return jsonify({"error": "Invalid website_url. Must include http(s) scheme and domain."}), 400
-
+        print(f"website analysis started at:{datetime.now()}")
         analyzer = SEOAnalyzer()
+        print(f"website analysis ended at:{datetime.now()}")
+        print(f"claude analysis started at:{datetime.now()}")
         gpt_service = GPTInsightsService()
-
+        print(f"claude analysis ended at:{datetime.now()}")
         async def run_analysis(url: str) -> Dict[str, Any]:
             seo_result = await analyzer.analyze_website(url)
             gpt_result = await gpt_service.generate_seo_insights(seo_result)
@@ -456,5 +458,5 @@ def customer_sentiment_analysis():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=os.environ.get("PORT"), debug=True, use_reloader=False)
+    app.run(host="0.0.0.0", port=os.getenv("PORT"), debug=True, use_reloader=False)
 

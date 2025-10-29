@@ -90,7 +90,7 @@ class InstagramAnalyzer:
                 'url': post.url,
                 'is_video': post.is_video
             })
-            if len(posts_data) > 132:
+            if len(posts_data) > 40:
                 break
             hashtags.extend(post.caption_hashtags)
 

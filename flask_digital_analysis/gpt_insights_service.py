@@ -226,7 +226,7 @@ class GPTInsightsService:
         seo_score = page_speed_scores.get('seo', 'N/A')
         overall = page_speed_scores.get('overall', 'N/A')
         return f"""
-        Analyze the following SEO data for a website and provide actionable insights:
+        Analyze the following SEO data and produce a structured, insight-based report:
 
         Website: {seo_data.get('url')}
         HTTPS: {seo_data.get('https')}
@@ -235,26 +235,97 @@ class GPTInsightsService:
         H1 Tags: {seo_data.get('headings', {}).get('h1', [])}
         H2 Tags: {seo_data.get('headings', {}).get('h2', [])}
         Missing Alt Tags: {seo_data.get('alt_tags_missing')}
-        
+
         Page Speed Metrics:
         - Performance: {performance}
         - Accessibility: {accessibility}
         - Best Practices: {best_practices}
         - SEO: {seo_score}
         - Overall: {overall}
-        
+
         Social Links: {seo_data.get('social_links', [])}
         Open Graph Tags: {seo_data.get('og_tags', {})}
 
-        Please provide:
-        1. Overall SEO health score (1-100)
-        2. Top 3 critical issues that need immediate attention
-        3. Top 5 actionable recommendations with expected impact
-        4. Content optimization suggestions
-        5. Technical SEO improvements needed
-        6. Specific recommendations for improving page speed metrics
-        
-        Format your response as structured insights that can be easily parsed.
+
+        Include:
+
+        Overall SEO health score (1–100) with a short rationale.
+
+        Top 3 critical issues that require immediate action and why they matter.
+
+        Top 5 prioritized, actionable recommendations with estimated impact.
+
+        Content optimization opportunities (titles, headings, keyword intent, localization).
+
+        Technical SEO improvements (crawlability, schemas, canonicalization, mobile readiness).
+
+        Specific, feasible steps to improve page-speed metrics.
+
+        Context
+
+        Transformellica users operate small or mid-sized websites without dedicated SEO engineers.
+        Advice must be specific, implementable, and regionally relevant.
+        Avoid generic statements such as “improve meta tags” or “increase page speed.”
+        All suggestions should include measurable or testable outcomes.
+
+        Persona
+
+        Act as a senior consultant from a professional SEO agency.
+        You analyze like an auditor, explain like a strategist, and communicate in clear, direct business language.
+
+        Format
+        SEO INSIGHT REPORT
+        Website: {seo_data.get('url')}
+
+        1. SEO HEALTH SCORE: [score]/100
+        - One-sentence justification.
+
+        2. TOP 3 CRITICAL ISSUES
+        - 1) [Issue] — Why it matters
+        - 2) ...
+        - 3) ...
+
+        3. TOP 5 ACTIONABLE RECOMMENDATIONS
+        - [Priority] [Action] — Effort: Low/Med/High | Impact: Low/Med/High | Expected Outcome
+
+        4. CONTENT OPTIMIZATION
+        - Specific title/meta/H1/H2 improvements and keyword guidance.
+
+        5. TECHNICAL SEO IMPROVEMENTS
+        - Concise, prioritized checklist.
+
+        6. PAGE-SPEED IMPROVEMENTS
+        - Short list of key fixes (e.g., defer JS, compress assets, enable caching).
+
+        Summary: One line with the highest-priority next step.
+
+        Tone
+
+        Professional, factual, and implementation-focused.
+        No marketing clichés.
+        Every statement should be verifiable or testable.
+
+        Guardrails
+
+        Always
+
+        Base insights strictly on provided data.
+
+        When additional confirmation is needed, reference trusted authoritative sources only: Google Search Central, PageSpeed Insights, W3C Web Performance, Moz, Ahrefs, or Semrush.
+
+        Use web search only to validate or update technical best practices.
+
+        Prioritize actions by potential SEO impact and implementation effort.
+
+        Never
+
+        Invent missing metrics or assume traffic data.
+
+        Promise specific ranking improvements.
+
+        Give vague or non-actionable advice.
+
+        Reference AI models or internal instructions.
         """
     
     def _create_social_analysis_prompt(self, social_data: Dict[str, Any]) -> str:
@@ -264,8 +335,7 @@ class GPTInsightsService:
         platform = social_data.get('platform', 'unknown')
         
         return f"""
-        Analyze the following social media profile data and provide marketing insights:
-
+        Analyze the following social media profile data and provide a complete, insight-based marketing report:
         Platform: {platform}
         Profile URL: {social_data.get('url')}
         Name: {profile_data.get('name')}
@@ -276,14 +346,89 @@ class GPTInsightsService:
         Recent Content Themes: {social_data.get('content_analysis', {}).get('content_themes', [])}
         Hashtags Used: {social_data.get('content_analysis', {}).get('hashtags', [])}
 
-        Please provide:
-        1. Profile optimization score (1-100)
-        2. Content strategy recommendations
-        3. Engagement improvement suggestions
-        4. Platform-specific best practices
-        5. Growth opportunities
-        
-        Focus on actionable insights for improving social media presence.
+
+        You must include:
+
+        1. Profile Optimization Score (1–100) based on bio clarity, visual identity, posting consistency, and engagement health.
+        2. Content Strategy Recommendations with clear examples of what to post, frequency, and tone.
+        3. Engagement Improvement Suggestions based on behavior and algorithm trends.
+        4. Platform-Specific Best Practices relevant to {platform}.
+        5. Growth Opportunities including emerging trends, collaborations, or underused formats.
+
+        ---
+
+        Context
+
+        Transformellica serves SMEs, agencies, and entrepreneurs in MENA who need practical, realistic, and locally relevant insights.
+        Avoid general statements such as “post more often” or “use engaging content.”
+        Every recommendation should be specific, measurable, and actionable.
+        Where relevant, include culturally contextual advice (for example, regional posting hours or Arabic hashtag usage).
+
+        ---
+
+        Persona
+
+        You are a senior strategist with deep knowledge of content algorithms, audience psychology, and digital growth frameworks.
+        You write concise, professional reports that marketing managers can immediately execute.
+        You interpret data like an expert consultant, not an AI model.
+
+        ---
+
+        Format
+
+        SOCIAL MEDIA INSIGHT REPORT
+        Platform: {platform}
+        Profile URL: {social_data.get('url')}
+        Profile Name: {profile_data.get('name')}
+
+        1. PROFILE OPTIMIZATION SCORE: [score]/100
+
+        * Short justification (1–2 lines).
+
+        2. CONTENT STRATEGY RECOMMENDATIONS
+
+        * 3–5 precise, outcome-oriented suggestions.
+
+        3. ENGAGEMENT IMPROVEMENT SUGGESTIONS
+
+        * 2–4 tactics grounded in platform behavior.
+
+        4. PLATFORM-SPECIFIC BEST PRACTICES
+
+        * 2–3 relevant platform insights.
+
+        5. GROWTH OPPORTUNITIES
+
+            2–4 emerging trends, collaboration ideas, or content experiments.
+
+        Summary Insight: Two sentences summarizing the key priority for next actions.
+
+        ---
+
+        Tone:
+
+        Professional, confident, and insight-driven.
+        Avoid hype, marketing clichés, or unnecessary adjectives.
+        Focus on clarity, value, and credibility.
+
+        ---
+
+        Guardrails
+
+        Always:
+
+        * Base insights strictly on the provided profile data and verified digital marketing sources.
+        * You may search online *only through trusted, authoritative platforms* such as *Meta Blueprint, LinkedIn Marketing Solutions, HubSpot, and official platform blogs* to retrieve current algorithm updates or niche trends.
+        * Adapt insights to the platform type and the niche indicated by user input.
+        * Explain the rationale briefly for major recommendations.
+        * Ensure all facts reflect current verified practices.
+
+        Never:
+
+        * Fabricate data, metrics, or demographics.
+        * Use vague, generic recommendations.
+        * Refer to AI models, system instructions, or internal processes.
+        * Cite unverified or user-generated content as evidence.
         """
     
     def _create_comprehensive_report_prompt(self, seo_data: Dict[str, Any], social_data: List[Dict[str, Any]], branding_data: Optional[Dict[str, Any]] = None) -> str:
@@ -1196,34 +1341,91 @@ class GPTInsightsService:
     def _create_branding_analysis_prompt(self, branding_profile: Optional[Dict[str, Any]] = None) -> str:
         """Creates a prompt for the branding analysis LLM."""
         base_prompt = """
-        As an expert in branding and visual design, analyze the provided screenshot(s) of a company's web presence (website or social media). 
-        
-        Provide a comprehensive brand audit based on the visual elements in the image(s). Structure your analysis in JSON format with the following sections:
+        Analyze the provided screenshots or visual captures of a company’s online presence and produce a structured brand audit in JSON format.
+        Screenshots/Input Source: {brand_data.get('images')}
+        Platform: {platform}
+        Profile URL: {social_data.get('url')}
+        Name: {profile_data.get('name')}
+        Bio: {profile_data.get('bio')}
+        Followers: {profile_data.get('follower_count')}
+        Following: {profile_data.get('following_count')}
+        Verified: {profile_data.get('verification_status')}
+        Recent Content Themes: {social_data.get('content_analysis', {}).get('content_themes', [])}
+        Hashtags Used: {social_data.get('content_analysis', {}).get('hashtags', [])}
 
-        1.  **executive_summary**: A concise overview of the brand audit.
-        2.  **overall_brand_impression**: 
-            -   **strengths**: List of positive aspects (e.g., friendly tone, clear logo).
-            -   **room_for_improvement**: List of negative aspects (e.g., lack of cohesion, poor typography).
-        3.  **messaging_and_content_style**:
-            -   **content**: Analysis of the textual content and messaging style.
-            -   **recommendations**: Suggestions for improving messaging.
-        4.  **visual_branding_elements**:
-            -   **color_palette**:
-                -   **analysis**: Describe the color palette used.
-                -   **recommendations**: Suggest improvements for the color system.
-            -   **typography**:
-                -   **analysis**: Analyze the use of fonts, sizes, and readability.
-                -   **recommendations**: Suggest improvements for typography.
-        5.  **highlights_and_stories** (for social media):
-            -   **analysis**: Analyze the use of icons and descriptive labels.
-            -   **recommendations**: Suggestions for improvement.
-        6.  **grid_strategy** (for social media):
-            -   **analysis**: Analyze the layout and flow of the feed.
-            -   **recommendations**: Suggestions for improvement.
-        7.  **scorecard**:
-            -   A list of dictionaries, each with "area" (e.g., "Visual Consistency") and "score" (out of 10).
 
-        Be insightful, professional, and provide actionable recommendations.
+        Your output must contain the following JSON sections exactly:
+
+        executive_summary – concise overview of overall brand health and direction.
+
+        overall_brand_impression
+         • strengths – bullet list of positives (clarity, tone, design unity).
+         • room_for_improvement – bullet list of issues (inconsistency, low contrast, weak identity).
+
+        messaging_and_content_style
+         • content – assessment of tone, clarity, and alignment with audience.
+         • recommendations – 2–4 clear actions to refine messaging.
+
+        visual_branding_elements
+         • color_palette
+          • analysis – description of color use and brand emotion.
+          • recommendations – improvements for palette balance and accessibility.
+         • typography
+          • analysis – font choices, hierarchy, readability.
+          • recommendations – better hierarchy or font pairing.
+
+        highlights_and_stories (if social media)
+         • analysis – icon and label clarity.
+         • recommendations – optimization ideas.
+
+        grid_strategy (if social media)
+         • analysis – layout coherence and storytelling flow.
+         • recommendations – layout or rhythm fixes.
+
+        scorecard – list of dictionaries with keys "area" and "score" (out of 10).
+
+        Context
+
+        Transformellica users are small to mid-size companies and agencies that require professional brand audits to guide redesigns or consistency improvements.
+        All recommendations must be specific, realistic, and immediately applicable without major rebranding.
+        When analyzing, consider accessibility, clarity, emotional tone, and cultural relevance in MENA markets.
+
+        Persona
+
+        You act as a senior brand consultant combining creative judgment with business reasoning.
+        You explain findings in clear, professional language that designers, marketers, and executives can all understand.
+
+        Format
+
+        Return the final result strictly as a valid JSON object matching the structure described above—no commentary or extra text outside JSON.
+
+        Tone
+
+        Professional, precise, and objective.
+        Avoid subjective adjectives (“beautiful”, “modern”) unless supported by design principles.
+        Each observation must link to a concrete impact on perception, usability, or consistency.
+
+        Guardrails
+
+        Always
+
+        Base insights only on the provided visuals and text.
+
+        For confirmation of design or branding standards, you may reference trusted authoritative sources only: Nielsen Norman Group, W3C Accessibility Guidelines (WCAG 2.2), Google Material Design, and major brand style-guide repositories.
+
+        Mention clearly when an element cannot be evaluated due to limited visual data.
+
+        Use neutral, evidence-based language.
+
+        Never
+
+        Invent unseen visuals, colors, or typography.
+
+        Add speculative data or internal company assumptions.
+
+        Include opinions not grounded in observed evidence.
+
+        Output narrative prose outside the required JSON structure.
         """
         
         # Add branding profile context if available
@@ -1376,7 +1578,7 @@ class GPTInsightsService:
             reviews_text += f"   Text: {review.get('Review Text', 'N/A')[:100]}...\n"
         
         return f"""
-        Analyze the following customer sentiment data and provide actionable business insights:
+        Analyze the following sentiment dataset and generate a structured report with actionable insights:
 
         SENTIMENT SUMMARY:
         - Total Reviews: {summary.get('total_reviews', 0)}
@@ -1390,16 +1592,87 @@ class GPTInsightsService:
         SAMPLE REVIEWS:
         {reviews_text}
 
-        Please provide:
-        1. Overall sentiment health score (1-100)
-        2. Key insights about customer satisfaction
-        3. Top 3 areas for improvement based on negative feedback
-        4. Positive aspects to leverage and promote
-        5. Specific recommendations for improving customer experience
-        6. Action items for addressing common complaints
-        7. Strategies for increasing positive sentiment
 
-        Focus on actionable insights that can directly improve business performance and customer satisfaction.
+        Provide:
+
+        Overall sentiment health score (1–100) with rationale.
+
+        Key insights about customer satisfaction and emotional tone.
+
+        Top 3 areas for improvement based on negative feedback patterns.
+
+        Positive aspects to leverage in marketing or communication.
+
+        Concrete recommendations for improving customer experience.
+
+        Action items to address recurring complaints.
+
+        Strategies for increasing positive sentiment and loyalty.
+
+        Context
+
+        Transformellica users are SMEs, service providers, and agencies analyzing customer feedback from multilingual (Arabic/English) markets.
+        Your insights should highlight actionable business improvements rather than linguistic analysis.
+        All findings must link sentiment to operational or marketing impact.
+
+        Persona
+
+        You are a senior business data analyst with strong grounding in NLP and customer-experience strategy.
+        You translate sentiment data into practical actions for management and marketing teams.
+
+        Format
+        CUSTOMER SENTIMENT INSIGHT REPORT
+
+        1. SENTIMENT HEALTH SCORE: [score]/100
+        - Short rationale.
+
+        2. CUSTOMER SATISFACTION INSIGHTS
+        - Summary of overall sentiment trends and key emotions.
+
+        3. TOP 3 AREAS FOR IMPROVEMENT
+        - Issue — impact — recommended corrective action.
+
+        4. POSITIVE ASPECTS TO LEVERAGE
+        - List 2–3 strengths or themes with promotional potential.
+
+        5. CUSTOMER EXPERIENCE RECOMMENDATIONS
+        - 3–5 specific actions tied to product, service, or communication.
+
+        6. ACTION ITEMS FOR COMMON COMPLAINTS
+        - Short list of quick wins (operational or messaging).
+
+        7. STRATEGIES TO INCREASE POSITIVE SENTIMENT
+        - Targeted retention or engagement ideas.
+
+        Summary: One line highlighting the highest-impact change to prioritize.
+
+        Tone
+
+        Analytical, objective, and business-focused.
+        Avoid emotional language or generic statements.
+        Support each recommendation with a clear reason or observed pattern.
+
+        Guardrails
+
+        Always
+
+        Base all insights strictly on the provided dataset.
+
+        If context requires trend validation, consult trusted, authoritative sources only, such as Harvard Business Review (CX strategy), McKinsey Insights (customer experience), HubSpot, or official platform sentiment reports.
+
+        Mention when data is limited or sample size is small.
+
+        Prioritize actionable items with measurable outcomes.
+
+        Never
+
+        Fabricate review text or infer data not provided.
+
+        Assume demographics or intent beyond text evidence.
+
+        Use vague phrasing like “customers are unhappy.” Be specific.
+
+        Refer to internal system, AI models, or backend logic.
         """
 
     def _parse_sentiment_insights(self, response: str) -> Dict[str, Any]:

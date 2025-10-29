@@ -36,7 +36,6 @@ class CompetitorSearchService:
             options.add_experimental_option('useAutomationExtension', False)
             
             try:
-                from selenium.webdriver.chrome.service import Service
                 service = Service(ChromeDriverManager().install())
                 driver = webdriver.Chrome(service=service, options=options)
                 driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
@@ -96,7 +95,7 @@ class CompetitorSearchService:
             logging.info(f"Navigating to: {search_url}")
             driver.get(search_url)
             # Wait up to 10 seconds for a possible "Accept All" button
-            cookie_button_selector = "[aria-label='Accept all']" # This is just a guess!
+            cookie_button_selector = "[aria-label='Accept all']"
             accept_button = WebDriverWait(driver, 10).until(
                     EC.element_to_be_clickable((By.CSS_SELECTOR, cookie_button_selector))
                 )
@@ -170,8 +169,8 @@ class CompetitorSearchService:
             print(inner_html)
 
             selectors_to_try = [
-                "[data-result-index]",
                 ".Nv2PK",
+                "[data-result-index]",
                 ".lI9IFe", 
                 ".section-result",
                 "[role='article']",
@@ -195,11 +194,11 @@ class CompetitorSearchService:
             
             for i, item in enumerate(result_items[:max_results]):
                 try:
+                    logging.info(f"Extracting competitor data from single item started at {datetime.now()}")
                     competitor_data = await self._extract_single_competitor(driver, item, i)
-                    
+                    logging.info(f"Extracting competitor data from single item ended at {datetime.now()}")
                     if not competitor_data:
                         competitor_data = self._extract_from_list_item(item, i)
-                    
                     if competitor_data:
                         competitors.append(competitor_data)
                         logging.info(f"Extracted competitor {i+1}: {competitor_data.get('name', 'Unknown')}")
@@ -223,33 +222,14 @@ class CompetitorSearchService:
                 await asyncio.sleep(3)
             except Exception:
                 logging.warning("Could not click on result item, trying to extract from list view")
-            
-            name_selectors = [
-                "h1[data-attrid='title']",
-                "h1",
-                ".x3AX1-LfntMc-header-title-title",
-                ".SPZz6b h1",
-            "[data-attrid='title']",
-            "a.hfpxzc", 
-            "[role='article'] a.hfpxzc"
-            ]
-            
-            name = ""
-            for selector in name_selectors:
-                candidate = self._safe_extract_text(driver, selector)
-                candidate = self._sanitize_business_name(candidate)
-                if candidate:
-                    name = candidate
-                    logging.info(f"Extracted name using selector {selector}: {name}")
-                    break
-            
+            name = self._safe_extract_text(item, ".fontHeadlineSmall")
+            logging.info(f"Extracted name using selector .fontHeadlineSmall")
             if not name:
-                name = self._sanitize_business_name(self._safe_extract_text(item, ".fontHeadlineSmall"))
-                if not name:
-                    name = self._sanitize_business_name(self._safe_extract_text(item, "h3"))
-                if not name:
-                    name = f"Business {index + 1}"
-            
+                name = self._safe_extract_text(item, "h3")
+                logging.info(f"Extracted name using selector h3")
+            if not name:
+                name = f"Business {index + 1}"
+                logging.info(f"Extracted name using selector Business {index + 1}")
             rating_selectors = [
                 "[jsaction*='pane.rating.moreReviews']",
                 ".fontDisplayLarge",
@@ -267,7 +247,7 @@ class CompetitorSearchService:
                     review_count = self._extract_review_count(rating_text)
                     if rating > 0:
                         break
-            
+            logging.info(f"Extracted rating using selector {rating_selectors}")
             address_selectors = [
                 "[data-item-id='address']",
                 ".Io6YTe",
@@ -280,7 +260,7 @@ class CompetitorSearchService:
                 address = self._safe_extract_text(driver, selector)
                 if address:
                     break
-            
+            logging.info(f"Extracted address using selector {address_selectors}")
             phone_selectors = [
                 "[data-item-id*='phone']",
                 "[data-attrid='kc:/business/phone']",
@@ -292,11 +272,9 @@ class CompetitorSearchService:
                 phone = self._safe_extract_text(driver, selector)
                 if phone:
                     break
-            
+            logging.info(f"Extracted phone using selector {phone_selectors}")
             current_url = driver.current_url
-            
             place_id = self._extract_place_id(current_url)
-            
             competitor_data = {
                 "name": name.strip(),
                 "rating": rating,
@@ -307,7 +285,7 @@ class CompetitorSearchService:
                 "place_id": place_id,
                 "index": index + 1
             }
-            
+            logging.info(f"Extracted competitor data: {competitor_data}")
             if competitor_data["name"] and competitor_data["name"] != f"Business {index + 1}":
                 return competitor_data
             else:
