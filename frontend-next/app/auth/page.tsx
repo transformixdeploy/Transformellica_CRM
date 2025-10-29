@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Zap } from 'lucide-react';
 
 const AuthPage = () => {
-  const [isSignIn, setIsSignIn] = useState<boolean>(true);
+  // const [isSignIn, setIsSignIn] = useState<boolean>(true);
 
   return (
     <div className="min-h-[calc(100vh-200px)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-background via-muted/20 to-background">
@@ -29,12 +29,14 @@ const AuthPage = () => {
             
             {/* title */}
             <CardTitle className="text-3xl font-extrabold bg-gradient-to-r from-primary to-secondary text-transparent bg-clip-text">
-              {isSignIn ? 'Welcome Back!' : 'Create Your Account'}
+              {/* {isSignIn ? 'Welcome Back!' : 'Create Your Account'} */}
+              Welcome Back!
             </CardTitle>
             
             {/* description */}
             <CardDescription>
-              {isSignIn ? 'Sign in to access your dashboard and reports.' : 'Join Transformellica to unlock AI-powered insights.'}
+              {/* {isSignIn ? 'Sign in to access your dashboard and reports.' : 'Join Transformellica to unlock AI-powered insights.'} */}
+              Sign in to access your dashboard and reports.
             </CardDescription>
             </CardHeader>
 
@@ -42,16 +44,18 @@ const AuthPage = () => {
             <CardContent>
 
             {/* put sign in or sign up form */}
-            {isSignIn ? <SignInForm /> : <SignUpForm />}
+            {/* {isSignIn ? <SignInForm /> : <SignUpForm />} */}
+            <SignInForm />
             
             {/* toggle between sign in and sign up button */}
             <div className="mt-6 text-center">
               <Button
                 variant="link"
-                onClick={() => setIsSignIn(!isSignIn)}
+                // onClick={() => setIsSignIn(!isSignIn)}
                 className="font-medium text-primary hover:text-primary/80"
               >
-                {isSignIn ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
+                {/* {isSignIn ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'} */}
+                {"Don't have an account? Sign Up"}
               </Button>
             </div>
           </CardContent>
