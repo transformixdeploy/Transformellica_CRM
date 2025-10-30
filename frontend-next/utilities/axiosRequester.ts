@@ -77,27 +77,38 @@ async function analysePatterns(minSupport: number) : Promise<{
     return responseFormat(await apiClient.post(`${baseBackendURL}/crm/pattern-analysis`, {minSupport}));
 }
 
-async function getWebsiteSWOTData(form: {}, accessToken: string) : Promise<{status: string, data: WebsiteSWOTData}>{
+async function createWebsiteSWOTData(form: {}) : Promise<{status: string, data: {id:string}}>{
     return responseFormat(await apiClient.post(`/social/website-swot`, form));
 }
 
-async function getSocialSWOTData(form: {}, accessToken: string) : Promise<{status: string, data: SocialSWOTData}>{
+async function createSocialSWOTData(form: {}) : Promise<{status: string, data: {id:string}}>{
     return responseFormat(await apiClient.post(`/social/social-swot`, form));
 }
 
-async function getSentimentAnalysisData(form: {}, accessToken: string) : Promise<{status: string, data: SentimentData }>{
+async function createSentimentAnalysisData(form: {}) : Promise<{status: string, data: {id:string} }>{
     return responseFormat(await apiClient.post(`/social/sentiment-analysis`, form));
 }
 
-async function getBrandAuditData(form: FormData, accessToken: string) : Promise<{status: string, data: BrandingAuditData}>{
+async function createBrandAuditData(form: FormData) : Promise<{status: string, data: {id:string}}>{
     return responseFormat(await apiClient.post(`/social/branding-audit`, form));
 }
 
-async function checkServiceLimitReached(accessToken: string, userDataCategory: string) : Promise<boolean>{
+async function checkServiceLimitReached(userDataCategory: string) : Promise<boolean>{
     const response = await apiClient.post(`/social/serviceLimitReached`, {category: userDataCategory});    
     return response.data.data.reached;
 }
 
+async function getUserData(id: string) : Promise<{status: string, data: any}>{
+    return responseFormat(await apiClient.get(`/social/userData/${id}`));
+}
+
+async function deleteUserData(id: string) : Promise<{status: string, data: {message: string}}>{
+    return responseFormat(await apiClient.delete(`/social/userData/${id}`));
+}
+
+async function getDataHistory(category: string) : Promise<{status: string, data: {userHistoryDataObjects : [{title: string, id: string, categoryUrl: string}]}}>{
+    return responseFormat(await apiClient.get(`/social/userData/history/${category}`));
+}
 
 
 export {
@@ -111,10 +122,13 @@ export {
     deleteCSVData,
     checkForPatterns,
     analysePatterns,
-    getWebsiteSWOTData,
-    getSocialSWOTData,
-    getSentimentAnalysisData,
-    getBrandAuditData,
+    createWebsiteSWOTData,
+    getUserData,
+    getDataHistory,
+    deleteUserData,
+    createSocialSWOTData,
+    createSentimentAnalysisData,
+    createBrandAuditData,
     login,
     refresh,
     logout,

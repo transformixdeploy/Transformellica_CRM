@@ -8,16 +8,23 @@ const upload = multer({ storage: storage });
 const router = express.Router();
 
 router.route("/website-swot")
-    .post(socialAnalysisController.websiteSWOT);
+    .post(socialAnalysisController.createWebsiteSWOT);
 
 router.route("/sentiment-analysis")
-    .post(socialAnalysisController.sentimentAnalysis);
+    .post(socialAnalysisController.createSentimentAnalysis);
 
 router.route("/social-swot")
-    .post(socialAnalysisController.socialSWOT);
+    .post(socialAnalysisController.createSocialSWOT);
 
 router.route("/branding-audit")
-    .post(upload.single("logoUpload") , socialAnalysisController.brandingAudit);
+    .post(upload.single("logoUpload") , socialAnalysisController.createBrandingAudit);
+
+router.route("/userData/:id")
+    .get(socialAnalysisController.getUserData)
+    .delete(socialAnalysisController.deleteUserData);
+
+router.route("/userData/history/:category")
+    .get(socialAnalysisController.getUserHistoryObjects);
 
 router.route("/serviceLimitReached")
     .post(socialAnalysisController.serviceLimitReached);

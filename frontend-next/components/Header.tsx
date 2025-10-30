@@ -2,7 +2,7 @@
 
 import React, { useContext } from 'react';
 import { motion } from 'framer-motion';
-import { Zap, LogIn, LogOut, UserCircle, Loader2, Home, CircleQuestionMark } from 'lucide-react';
+import { Zap, LogIn, LogOut, UserCircle, Loader2, Home, CircleQuestionMark, ChevronDown, ChevronsLeftRightEllipsis, BadgeCheck, Smile, MessageCircleMore, ChartSpline, History } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from './ui/button';
@@ -54,13 +54,55 @@ const Header = () => {
         </Link>
 
         {/* Big screens Nav Bar */}
-        <nav className="max-sm:hidden flex items-center space-x-6">
+        <nav className="max-md:hidden flex items-center space-x-6">
           
           {/* Big screens Home  */}
           <Link href="/" className="max-sm:hidden text-sm text-foreground/80 hover:text-primary transition-colors">Home</Link>
           
           {/* How it works */}
           <Link href="/how-it-works" className="text-sm text-foreground/80 hover:text-primary transition-colors">How It Works</Link>
+
+          {isAuthenticated ? 
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="relative">
+                    Analysis history
+                    <ChevronDown className="size-7 text-primary hover:text-primary/80" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-normal font-bold leading-none">My history</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <Link href={"/social-swot"}>
+                  <DropdownMenuItem className="cursor-pointer">
+                    <MessageCircleMore className="mr-2 h-4 w-4" />
+                    <span>Social media</span>
+                  </DropdownMenuItem>
+                </Link>
+                <Link href={"/website-swot"}>
+                  <DropdownMenuItem className="cursor-pointer">
+                    <ChevronsLeftRightEllipsis className="mr-2 h-4 w-4" />
+                    <span>Website</span>
+                  </DropdownMenuItem>
+                </Link>
+                <Link href={"/customer-sentiment"}>
+                  <DropdownMenuItem className="cursor-pointer">
+                    <Smile className="mr-2 h-4 w-4" />
+                    <span>Sentiment analysis</span>
+                  </DropdownMenuItem>
+                </Link>
+                <Link href={"/branding-audit"}>
+                  <DropdownMenuItem className="cursor-pointer">
+                    <ChartSpline className="mr-2 h-4 w-4" />
+                    <span>Branding audit</span>
+                  </DropdownMenuItem>
+                </Link>
+              </DropdownMenuContent>
+            </DropdownMenu> : <></> }
           
           {/* Sign in / Sign out button  */}
           { isAuthenticated ? (
@@ -97,7 +139,7 @@ const Header = () => {
         </nav>
 
         {/* Small screens Nav Bar */}
-        <nav className="sm:hidden flex items-center space-x-6">
+        <nav className="md:hidden flex items-center space-x-6">
           
           {/* Home */}
           {/* <Link href="/" className="text-sm text-foreground/80 hover:text-primary transition-colors">
@@ -108,6 +150,47 @@ const Header = () => {
           <Link href="/how-it-works" className="text-sm text-foreground/80 hover:text-primary transition-colors">
             <CircleQuestionMark/>
           </Link>
+
+          {isAuthenticated ? 
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="link" className="relative h-8 w-8 rounded-full text-sm text-foreground/80 hover:text-primary transition-colors hover:cursor-pointer">
+                    <History className="size-7" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-normal font-bold leading-none">My history</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <Link href={"/social-swot"}>
+                  <DropdownMenuItem className="cursor-pointer">
+                    <MessageCircleMore className="mr-2 h-4 w-4" />
+                    <span>Social media</span>
+                  </DropdownMenuItem>
+                </Link>
+                <Link href={"/website-swot"}>
+                  <DropdownMenuItem className="cursor-pointer">
+                    <ChevronsLeftRightEllipsis className="mr-2 h-4 w-4" />
+                    <span>Website</span>
+                  </DropdownMenuItem>
+                </Link>
+                <Link href={"/customer-sentiment"}>
+                  <DropdownMenuItem className="cursor-pointer">
+                    <Smile className="mr-2 h-4 w-4" />
+                    <span>Sentiment analysis</span>
+                  </DropdownMenuItem>
+                </Link>
+                <Link href={"/branding-audit"}>
+                  <DropdownMenuItem className="cursor-pointer">
+                    <ChartSpline className="mr-2 h-4 w-4" />
+                    <span>Branding audit</span>
+                  </DropdownMenuItem>
+                </Link>
+              </DropdownMenuContent>
+            </DropdownMenu> : <></> }
           
           {/* Sign in / Sign out button  */}
           { isAuthenticated ? (

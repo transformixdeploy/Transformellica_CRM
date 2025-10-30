@@ -8,18 +8,15 @@ import {UserData, User} from "../models/index.js";
 import {categories} from "../utils/userDataCategory.js";
 import { roles } from '../utils/userRoles.js';
 
-const websiteSWOT = asyncWrapper(
+const createWebsiteSWOT = asyncWrapper(
     async (req,res,next)=>{
         
         const user = await User.findOne({where: {email: req.user.email}});
 
-        const oldUserData = await UserData.findOne({where: {
-            category: categories.WEBSITE_SWOT,
-            userId: user.id
-        }})
+        const limiteReached = await serviceLimitReachedHelperFunction(user.role, user.id, categories.WEBSITE_SWOT);
 
-        if(oldUserData && user.role !== roles.ADMIN){
-            return JSendResponser(res, HttpStatusCode.BAD_REQUEST, HttpStatusMessage.FAIL, {message: "Only 1 request per service."});
+        if(limiteReached){
+            return JSendResponser(res, HttpStatusCode.BAD_REQUEST, HttpStatusMessage.FAIL, {message: "Limit Reached for this service"});
         }
 
         console.log("Website SWOT: User is verified");
@@ -44,46 +41,43 @@ const websiteSWOT = asyncWrapper(
             console.log("Website SWOT: Saving data to UserData");
             // save data to UserData
             const createdUserData = await UserData.create({
+                title: `${website_url} - {${new Date().toLocaleString()}}`,
                 data: response.data,
                 category: categories.WEBSITE_SWOT,
-                userId: user.id
+                userId: user.id,
             });
-
             console.log("Website SWOT: Data saved to UserData");
             
-            
             console.log("Website SWOT: Sending response to client");
-            return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, response.data);
+            return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
         }
 
         
         // save data to UserData
         const createdUserData = await UserData.create({
+            title: `${website_url} - {${new Date().toLocaleString()}}`,
             data: testData.websiteSWOTTestData,
             category: categories.WEBSITE_SWOT,
             userId: user.id
         });
-
         console.log("Website SWOT: Data saved to UserData");
 
-        console.log("Website SWOT: Sending response to client");    
-        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, testData.websiteSWOTTestData);
+        console.log("Website SWOT: Sending response to client");
+        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
     }
 );
 
-const sentimentAnalysis = asyncWrapper(
+const createSentimentAnalysis = asyncWrapper(
     async (req,res,next)=>{
 
         const user = await User.findOne({where: {email: req.user.email}});
 
-        const oldUserData = await UserData.findOne({where: {
-            category: categories.SENTIMENT,
-            userId: user.id
-        }})
+        const limiteReached = await serviceLimitReachedHelperFunction(user.role, user.id, categories.SENTIMENT);
 
-        if(oldUserData && user.role !== roles.ADMIN){
-            return JSendResponser(res, HttpStatusCode.BAD_REQUEST, HttpStatusMessage.FAIL, {message: "Only 1 request per service."});
+        if(limiteReached){
+            return JSendResponser(res, HttpStatusCode.BAD_REQUEST, HttpStatusMessage.FAIL, {message: "Limit Reached for this service"});
         }
+
         console.log("Sentiment Analysis: User is verified");
 
         
@@ -104,6 +98,7 @@ const sentimentAnalysis = asyncWrapper(
             console.log("Sentiment Analysis: Saving data to UserData");
             // save data to UserData
             const createdUserData = await UserData.create({
+                title: `${country} / ${industry_field} - {${new Date().toLocaleString()}}`,
                 data: response.data,
                 category: categories.SENTIMENT,
                 userId: user.id
@@ -111,12 +106,13 @@ const sentimentAnalysis = asyncWrapper(
             console.log("Sentiment Analysis: Data saved to UserData");
 
             console.log("Sentiment Analysis: Sending response to client");
-            return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, response.data);
+            return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
         }
         
 
         // save data to UserData
         const createdUserData = await UserData.create({
+            title: `${country} / ${industry_field} - {${new Date().toLocaleString()}} `,
             data: testData.sentimentTestData,
             category: categories.SENTIMENT,
             userId: user.id
@@ -124,22 +120,19 @@ const sentimentAnalysis = asyncWrapper(
         console.log("Sentiment Analysis: Data saved to UserData");
 
         console.log("Sentiment Analysis: Sending response to client");
-        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, testData.sentimentTestData);
+        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
     }
 );
 
-const socialSWOT = asyncWrapper(
+const createSocialSWOT = asyncWrapper(
     async (req,res,next)=>{
 
         const user = await User.findOne({where: {email: req.user.email}});
 
-        const oldUserData = await UserData.findOne({where: {
-            category: categories.SOCIAL_SWOT,
-            userId: user.id
-        }})
+        const limiteReached = await serviceLimitReachedHelperFunction(user.role, user.id, categories.SOCIAL_SWOT);
 
-        if(oldUserData && user.role !== roles.ADMIN){
-            return JSendResponser(res, HttpStatusCode.BAD_REQUEST, HttpStatusMessage.FAIL, {message: "Only 1 request per service."});
+        if(limiteReached){
+            return JSendResponser(res, HttpStatusCode.BAD_REQUEST, HttpStatusMessage.FAIL, {message: "Limit Reached for this service"});
         }
 
         const {business_description, company_name, country, goal, instagram_link} = req.body;  
@@ -155,37 +148,36 @@ const socialSWOT = asyncWrapper(
 
             // save data to UserData
             const createdUserData = await UserData.create({
+                title: `${country} - ${instagram_link} - {${new Date().toLocaleString()}}`,
                 data: response.data,
                 category: categories.SOCIAL_SWOT,
                 userId: user.id
             });
           
-            return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, response.data);
+            return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
         }
 
         // save data to UserData
         const createdUserData = await UserData.create({
+            title: `${country} - ${instagram_link} - {${new Date().toLocaleString()}}`,
             data: testData.socialSWOTTestData,
             category: categories.SOCIAL_SWOT,
             userId: user.id
         });
         
-        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, testData.socialSWOTTestData);
+        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
     }
 );
 
-const brandingAudit = asyncWrapper(
+const createBrandingAudit = asyncWrapper(
     async (req,res,next)=>{
 
         const user = await User.findOne({where: {email: req.user.email}});
 
-        const oldUserData = await UserData.findOne({where: {
-            category: categories.BRAND_AUDIT,
-            userId: user.id
-        }})
+        const limiteReached = await serviceLimitReachedHelperFunction(user.role, user.id, categories.BRAND_AUDIT);
 
-        if(oldUserData && user.role !== roles.ADMIN){
-            return JSendResponser(res, HttpStatusCode.BAD_REQUEST, HttpStatusMessage.FAIL, {message: "Only 1 request per service."});
+        if(limiteReached){
+            return JSendResponser(res, HttpStatusCode.BAD_REQUEST, HttpStatusMessage.FAIL, {message: "Limit Reached for this service"});
         }
 
         const logoUpload = req.file;
@@ -210,22 +202,24 @@ const brandingAudit = asyncWrapper(
 
             // save data to UserData
             const createdUserData = await UserData.create({
+                title: `${country} / ${logoUpload.originalname} - {${new Date().toLocaleString()}}`,
                 data: response.data,
                 category: categories.BRAND_AUDIT,
                 userId: user.id
             });
 
-            return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, response.data);
+            return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
         }
 
         // save data to UserData
         const createdUserData = await UserData.create({
+            title: `${country} / ${logoUpload.originalname} - {${new Date().toLocaleString()}}`,
             data: testData.brandAuditTestData,
             category: categories.BRAND_AUDIT,
             userId: user.id
         });
         
-        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, testData.brandAuditTestData); 
+        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id}); 
     }
 );
 
@@ -235,28 +229,97 @@ const serviceLimitReached = asyncWrapper(
         // get user
         const user = await User.findOne({where: {email: req.user.email}});
         const category = req.body.category;
-        const userData = await UserData.findOne({where: {
-            userId: user.id,
-            category: category
-        }})
+        
+        const limiteReached = await serviceLimitReachedHelperFunction(user.role, user.id, category);
 
-        if(user.role === roles.ADMIN){
-            JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {reached: false}); 
+        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {reached: limiteReached}); 
+    }
+);
+
+const serviceLimitReachedHelperFunction = async (userRole, userId, category)=>{
+
+    const {rows, count} = await UserData.findAndCountAll({where: {userId,category}});
+
+    if(userRole === roles.ADMIN){
+        return false; 
+    }
+
+    if(count >= Number(process.env.FREE_USER_DIGITAL_ANALYSIS_LIMIT)){
+        return true; 
+    }else{
+        return false; 
+    }
+}
+
+const getUserHistoryObjects = asyncWrapper(
+    async(req,res,next)=>{
+
+        const user = await User.findOne({where: {email: req.user.email}});
+        const category = req.params.category;
+
+        const userDataArray = await UserData.findAll({
+            where: {
+                userId: user.id,
+                category: category
+            },
+            order: [
+                ["createdAt", "DESC"],
+                ["title", "ASC"],
+            ]
+        })
+
+        var categoryUrl;
+        if(category === categories.WEBSITE_SWOT){
+            categoryUrl = "website-swot";
+        }else if(category === categories.BRAND_AUDIT){
+            categoryUrl = "branding-audit";
+        }else if(category === categories.SOCIAL_SWOT){
+            categoryUrl = "social-swot";
+        }else{
+            categoryUrl = "customer-sentiment";
         }
+
+        const userDataObjects = []
+        userDataArray.forEach(userData => {
+            userDataObjects.push({title: userData.dataValues.title, id: userData.dataValues.id, categoryUrl: categoryUrl});
+        });
         
 
-        if(userData){
-            JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {reached: true}); 
-        }else{
-            JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {reached: false}); 
-        }
+        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {userHistoryDataObjects: userDataObjects});
     }
-)
+);
+
+const getUserData = asyncWrapper(
+    async (req,res,next)=>{
+        const userDataId = req.params.id;
+        const data = await UserData.findOne({
+            where: {
+                id: userDataId
+            }
+        })
+        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, data.dataValues.data);
+    }
+);
+
+const deleteUserData = asyncWrapper(
+    async (req,res,next)=>{
+        const userDataId = req.params.id;
+        await UserData.destroy({
+            where: {
+                id: userDataId
+            }
+        })
+        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {message: "User data deleted."});
+    }
+);
 
 export default {
-    websiteSWOT,
-    sentimentAnalysis,
-    socialSWOT,
-    brandingAudit,
+    createWebsiteSWOT,
+    getUserData,
+    deleteUserData,
+    getUserHistoryObjects,
+    createSentimentAnalysis,
+    createSocialSWOT,
+    createBrandingAudit,
     serviceLimitReached
 }

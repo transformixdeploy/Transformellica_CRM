@@ -5,6 +5,7 @@ import { jwtDecode } from "jwt-decode";
 import {logout, refresh} from "@/utilities/axiosRequester";
 import { AxiosError } from "axios";
 import { apiClient } from "@/utilities/axiosApiClient";
+import { useRef } from "react";
 
 enum Roles {
   client = "client",
@@ -36,9 +37,14 @@ export const AuthContext = createContext<AuthContextType>({
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true); // Track initial load
+  const accessTokenRef = useRef<string | null>(null);
   
   const isAuthenticated = !!accessToken;
   const user : User | null = !!accessToken ? jwtDecode(accessToken) : null;
+  
+  useEffect(() => {
+    accessTokenRef.current = accessToken;
+  }, [accessToken]);
 
   // Function to refresh access token
   const refreshAccessToken = async () => {
@@ -66,11 +72,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const requestInterceptor = apiClient.interceptors.request.use((config) => {
       
+      const token = accessTokenRef.current;
 
-      if (accessToken && !(config as any)._retry) {
+      if (token && !(config as any)._retry) {
         console.log("Attaching access token to the request headers");
-        console.log(`Token: ${accessToken}`);
-        config.headers.Authorization = `Bearer ${accessToken}`;
+        console.log(`Token: ${token}`);
+        config.headers.Authorization = `Bearer ${token}`;
       }
       return config;
     });
@@ -78,7 +85,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       apiClient.interceptors.request.eject(requestInterceptor);
     };
-  }, [accessToken]);
+  }, []);
 
   // Add response interceptor (once on mount)
   useEffect(() => {
@@ -104,7 +111,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setAccessToken(newAccessToken);
             
             // Update header and retry
-            originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
+            originalRequest.headers["Authorization"] = `Bearer ${accessTokenRef.current}`;
             console.log("Retrying the request.");
             return await apiClient(originalRequest);
 

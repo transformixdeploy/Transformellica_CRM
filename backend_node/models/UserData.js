@@ -8,18 +8,24 @@ const UserData = sequelize.define('userData',{
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true
     },
-    data: {
-      type: DataTypes.JSONB,
+    title: {
+      type: DataTypes.STRING,
+      defaultValue: "title",
       allowNull: false
     },
     category: {
       type: DataTypes.ENUM,
       values: categoriesEnum,
       allowNull: false
+    },
+    data: {
+      type: DataTypes.JSONB,
+      allowNull: false
     }
   },
   {
-    // Other model options go here
+    paranoid: true,
+    timestamps: true,
   },
 );
 
