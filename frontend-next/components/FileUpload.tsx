@@ -67,7 +67,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ id, onFileChange, accept, fileN
           <div className="flex flex-col items-center justify-center">
             <div className="flex items-center text-green-600">
               {icon || <FileIcon className="w-8 h-8 mr-2" />}
-              <span className="font-medium truncate max-w-xs">{displayFileName}</span>
+              <span className="font-medium truncate max-w-[200]">{displayFileName}</span>
             </div>
             <Button
               variant="ghost"
