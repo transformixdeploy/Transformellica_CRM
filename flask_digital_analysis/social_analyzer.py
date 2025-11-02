@@ -10,7 +10,6 @@ import asyncio
 from instagram_analyzer import InstagramAnalyzer
 
 class SocialAnalyzer:
-
     def __init__(self):
         self.timeout = aiohttp.ClientTimeout(total=30)
         self.headers = {
@@ -34,7 +33,7 @@ class SocialAnalyzer:
                 parsed_url = urlparse(url)
                 path_parts = parsed_url.path.strip('/').split('/')
                 if path_parts:
-                    username = path_parts[0]
+                    username = path_parts[0]  
                     
                     instagram_data = await self.instagram_analyzer.analyze_profile(username)
                     
@@ -65,7 +64,7 @@ class SocialAnalyzer:
                                 "avg_comments": instagram_data.get("engagement", {}).get("avg_comments")
                             },
                             "accessibility": not instagram_data.get("is_private", False),
-                            "detailed_data": instagram_data,
+                            "detailed_data": instagram_data,  
                             "analysis_method": method,
                             "analysis_note": note
                         }
@@ -108,7 +107,7 @@ class SocialAnalyzer:
                 if not username:
                     raise Exception("Unable to extract TikTok username from URL")
                 loop = asyncio.get_running_loop()
-                data = await loop.run_in_executor(None, lambda: tiktok_scrape_profile(username, headless=True, max_posts=100))
+                data = await loop.run_in_executor(None, lambda: tiktok_scrape_profile(username, headless=True, max_posts=20))
                 posts = data.get('posts', []) or []
                 like_values = [p.get('likes') for p in posts if isinstance(p.get('likes'), int)]
                 comment_values = [p.get('comments') for p in posts if isinstance(p.get('comments'), int)]
@@ -157,6 +156,7 @@ class SocialAnalyzer:
                 print(f"TikTok scrape failed: {e}")
 
         try:
+            # Fetch basic information
             html_content = await self._fetch_html(url)
             soup = BeautifulSoup(html_content, 'html.parser')
             
@@ -223,6 +223,7 @@ class SocialAnalyzer:
         return title_tag.get_text().strip() if title_tag else None
     
     def _extract_description(self, soup: BeautifulSoup) -> Optional[str]:
+
         meta_desc = soup.find('meta', attrs={'name': 'description'})
         if meta_desc and isinstance(meta_desc, Tag):
             content = meta_desc.get('content', '')

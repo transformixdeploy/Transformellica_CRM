@@ -5,6 +5,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver import ActionChains
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.service import Service
 import re, time, urllib.parse, os, json
 
 def to_western_digits(s: str) -> str:
@@ -302,8 +304,8 @@ def scrape_profile_and_posts(username: str, *, headless: bool = False, max_posts
     user_data_dir = os.environ.get("TIKTOK_USER_DATA_DIR", "").strip()
     if user_data_dir:
         opts.add_argument(f"--user-data-dir={user_data_dir}")
-
-    driver = webdriver.Chrome(options=opts)
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(options=opts,service=service)
     wait = WebDriverWait(driver, 30)
 
     try:
@@ -362,6 +364,13 @@ def scrape_profile_and_posts(username: str, *, headless: bool = False, max_posts
             except Exception as e:
                 posts.append({"url": link, "error": str(e)})
             time.sleep(0.8)
+        print(f"Scraped {len(posts)} posts from @{username}")
+        print("metrics:", {
+            "following": parse_count(following_txt),
+            "followers": parse_count(followers_txt),
+            "likes_total": parse_count(likes_txt),
+            "bio": bio,
+        })
         return {
             "profile": {
                 "username": username,
@@ -380,6 +389,6 @@ def scrape_profile_and_posts(username: str, *, headless: bool = False, max_posts
         driver.quit()
 
 if __name__ == "__main__":
-    data = scrape_profile_and_posts("thetransformix", headless=True, max_posts=100)    
+    data = scrape_profile_and_posts("thetransformix", headless=True, max_posts=40)    
     from pprint import pprint
     pprint(data)
