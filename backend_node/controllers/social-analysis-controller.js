@@ -22,6 +22,10 @@ const createWebsiteSWOT = asyncWrapper(
         console.log("Website SWOT: User is verified");
 
         const {business_description, company_name, country, goal, website_url} = req.body;
+        const brandName = website_url.match(/^(?:https?:\/\/)?(?:www\.)?(?:[\w-]+\.)*([\w-]+)\.\w+(?:\/|$)/i)[1];
+
+        console.log("Website url: ", website_url);
+        console.log("Brand name: ", brandName);
       
         if(process.env.AI_SERVICE_TRANSFORMELLICA_URL){
 
@@ -41,7 +45,7 @@ const createWebsiteSWOT = asyncWrapper(
             console.log("Website SWOT: Saving data to UserData");
             // save data to UserData
             const createdUserData = await UserData.create({
-                title: `${website_url} - {${new Date().toLocaleString()}}`,
+                title: `${brandName} - {${new Date().toLocaleString()}}`,
                 data: response.data,
                 category: categories.WEBSITE_SWOT,
                 userId: user.id,
@@ -52,10 +56,9 @@ const createWebsiteSWOT = asyncWrapper(
             return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
         }
 
-        
         // save data to UserData
         const createdUserData = await UserData.create({
-            title: `${website_url} - {${new Date().toLocaleString()}}`,
+            title: `${brandName} - {${new Date().toLocaleString()}}`,
             data: testData.websiteSWOTTestData,
             category: categories.WEBSITE_SWOT,
             userId: user.id
@@ -136,6 +139,10 @@ const createSocialSWOT = asyncWrapper(
         }
 
         const {business_description, company_name, country, goal, instagram_link} = req.body;  
+        const brandName = instagram_link.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^/?#]+)(?:[/?#]|$)/i)[1];
+
+        console.log("Instgram Link: ", instagram_link);
+        console.log("Brand name: ", brandName);
       
         if(process.env.AI_SERVICE_TRANSFORMELLICA_URL){
             const response = await axios.post(`${process.env.AI_SERVICE_TRANSFORMELLICA_URL}/social-swot-analysis`, {
@@ -148,7 +155,7 @@ const createSocialSWOT = asyncWrapper(
 
             // save data to UserData
             const createdUserData = await UserData.create({
-                title: `${country} - ${instagram_link} - {${new Date().toLocaleString()}}`,
+                title: `${country} - ${brandName} - {${new Date().toLocaleString()}}`,
                 data: response.data,
                 category: categories.SOCIAL_SWOT,
                 userId: user.id
@@ -159,7 +166,7 @@ const createSocialSWOT = asyncWrapper(
 
         // save data to UserData
         const createdUserData = await UserData.create({
-            title: `${country} - ${instagram_link} - {${new Date().toLocaleString()}}`,
+            title: `${country} - ${brandName} - {${new Date().toLocaleString()}}`,
             data: testData.socialSWOTTestData,
             category: categories.SOCIAL_SWOT,
             userId: user.id
