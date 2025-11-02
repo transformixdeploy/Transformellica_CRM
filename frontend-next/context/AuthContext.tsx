@@ -109,6 +109,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             console.log(`New access token aloo: ${newAccessToken}`);
             
             setAccessToken(newAccessToken);
+            accessTokenRef.current = newAccessToken;  // Sync ref immediately
             
             // Update header and retry
             originalRequest.headers["Authorization"] = `Bearer ${accessTokenRef.current}`;
