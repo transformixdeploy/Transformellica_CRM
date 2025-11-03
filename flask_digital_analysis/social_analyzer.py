@@ -107,7 +107,7 @@ class SocialAnalyzer:
                 if not username:
                     raise Exception("Unable to extract TikTok username from URL")
                 loop = asyncio.get_running_loop()
-                data = await loop.run_in_executor(None, lambda: tiktok_scrape_profile(username, headless=True, max_posts=20))
+                data = await loop.run_in_executor(None, lambda: tiktok_scrape_profile(username, headless=False, max_posts=40))
                 posts = data.get('posts', []) or []
                 like_values = [p.get('likes') for p in posts if isinstance(p.get('likes'), int)]
                 comment_values = [p.get('comments') for p in posts if isinstance(p.get('comments'), int)]

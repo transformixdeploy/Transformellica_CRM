@@ -456,6 +456,117 @@ def customer_sentiment_analysis():
     except Exception as e:
         return jsonify({"error": f"Failed to process request: {str(e)}"}), 500
 
+@app.post("/ai/social-analysis-tiktok")
+def social_analysis_tiktok():
+    try:
+        body = request.get_json(force=True, silent=True) or {}
+
+        tiktok_link = (body.get("tiktok_link") or body.get("url") or "").strip()
+        country = (body.get("country") or "").strip()
+
+        if not tiktok_link:
+            return jsonify({"error": "tiktok_link (or url) is required"}), 400
+
+        if not is_valid_url(tiktok_link):
+            tiktok_link = validate_url(tiktok_link)
+            if not is_valid_url(tiktok_link):
+                return jsonify({"error": "Invalid tiktok_link. Must include http(s) scheme and domain."}), 400
+
+        analyzer = SocialAnalyzer()
+        gpt_service = GPTInsightsService()
+
+        async def run_tiktok(url: str, user_country: str = "") -> Dict[str, Any]:
+            social_result = await analyzer.analyze_social_url(url)
+            platform = social_result.get("platform", "")
+            if platform != "TikTok":
+                return {
+                    "error": "Provided URL is not a TikTok profile",
+                    "platform": platform,
+                    "url": url
+                }
+
+            social_result['user_country'] = user_country
+            gpt_result = await gpt_service.generate_social_insights(social_result)
+
+            profile = social_result.get("profile_data", {}) or {}
+            content = social_result.get("content_analysis", {}) or {}
+            detailed = social_result.get("detailed_data", {}) or {}
+
+            posts_count = (
+                detailed.get("posts_count", 0)
+                or detailed.get("content_analysis", {}).get("posts_count", 0)
+                or content.get("post_count_scanned", 0)
+                or 0
+            )
+            engagement = detailed.get("engagement", {}) or {}
+            avg_likes = engagement.get("avg_likes", 0) or content.get("avg_likes", 0) or 0
+            avg_comments = engagement.get("avg_comments", 0) or content.get("avg_comments", 0) or 0
+            engagement_per_post = engagement.get("engagement_per_post", 0) or 0
+            if not engagement_per_post and (avg_likes or avg_comments):
+                engagement_per_post = float(avg_likes) + float(avg_comments)
+
+            top_hashtags_map = detailed.get("content_analysis", {}).get("top_hashtags", {}) or {}
+            if not top_hashtags_map:
+                posts = detailed.get("posts") or detailed.get("content_analysis", {}).get("recent_posts") or []
+                if isinstance(posts, list) and posts:
+                    freq = {}
+                    for p in posts:
+                        for tag in (p.get("hashtags") or []):
+                            if not isinstance(tag, str):
+                                continue
+                            freq[tag] = freq.get(tag, 0) + 1
+                    top_hashtags_map = freq
+                if not top_hashtags_map:
+                    tags_list = None
+                    if isinstance(content.get("top_hashtags"), list):
+                        tags_list = content.get("top_hashtags")
+                    elif isinstance(content.get("hashtags"), list):
+                        tags_list = content.get("hashtags")
+                    if tags_list:
+                        top_hashtags_map = {tag: 1 for tag in tags_list}
+            top_hashtags = [{"tag": tag, "frequency": freq} for tag, freq in top_hashtags_map.items()]
+
+            insights = (gpt_result or {}).get("insights", {})
+            payload = {
+                "analysisTitle": f"TikTok Analysis for  { profile.get("name", "") }",
+                "followers": profile.get("follower_count", 0) or 0,
+                "following": profile.get("following_count", 0) or 0,
+                "engagementRate": (content.get("engagement_rate", 0) or 0) * 100,
+                "profileInfo": {
+                    "basicInfo": {
+                        "name": profile.get("name", ""),
+                        "bio": profile.get("bio", "") or "",
+                        "verified": bool(profile.get("verification_status", False)),
+                        "private": bool(profile.get("is_private", False)),
+                        "website": profile.get("external_url", "") or "",
+                    },
+                    "additionalMetrics": {
+                        "postsCount": posts_count or 0,
+                        "averageLikes": float(avg_likes or 0),
+                        "averageComments": float(avg_comments or 0),
+                        "EngagementPerPost": float(engagement_per_post or 0),
+                    },
+                },
+                "topHashTags": top_hashtags,
+                "fullSocialAnalysis": insights.get("full_analysis", ""),
+            }
+            return payload
+
+        loop = asyncio.new_event_loop()
+        try:
+            asyncio.set_event_loop(loop)
+            response_payload = loop.run_until_complete(run_tiktok(tiktok_link, country))
+        finally:
+            loop.close()
+
+        if isinstance(response_payload, dict) and response_payload.get("error"):
+            return jsonify(response_payload), 400
+
+        return jsonify(response_payload), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Failed to process request: {str(e)}"}), 500
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=os.getenv("PORT"), debug=True, use_reloader=False)

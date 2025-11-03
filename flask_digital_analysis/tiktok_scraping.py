@@ -5,9 +5,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver import ActionChains
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.chrome.service import Service
 import re, time, urllib.parse, os, json
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 
 def to_western_digits(s: str) -> str:
     arabic_map  = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
@@ -32,11 +32,11 @@ def parse_count(s: str) -> int | None:
     except Exception:
         return None
 
-def get_text(wait, candidates):
+def get_text(driver, candidates, timeout: int = 6):
     for by, sel in candidates:
         try:
-            el = wait.until(EC.visibility_of_element_located((by, sel)))
-            txt = el.text.strip()
+            el = WebDriverWait(driver, timeout).until(EC.presence_of_element_located((by, sel)))
+            txt = (el.text or "").strip()
             if txt:
                 return txt
         except Exception:
@@ -87,7 +87,7 @@ def load_tiktok_cookies():
 def ensure_post_grid(wait):
     return wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '[data-e2e="user-post-item-list"]')))
 
-def scroll_grid_and_collect_links(driver, wait, limit=None, max_scrolls=800, idle_rounds=12):
+def scroll_grid_and_collect_links(driver, wait, limit=None, max_scrolls=300, idle_rounds=6):
 
     container = ensure_post_grid(wait)
 
@@ -127,7 +127,7 @@ def scroll_grid_and_collect_links(driver, wait, limit=None, max_scrolls=800, idl
             actions.move_to_element(container).click(container).send_keys(Keys.END).perform()
         except Exception:
             pass
-        time.sleep(0.8)
+        time.sleep(0.35)
 
         try:
             scroll_h = driver.execute_script("return arguments[0].scrollHeight;", container)
@@ -148,7 +148,7 @@ def scroll_grid_and_collect_links(driver, wait, limit=None, max_scrolls=800, idl
             body = driver.find_element(By.TAG_NAME, 'body')
             for _ in range(6):
                 body.send_keys(Keys.END)
-                time.sleep(0.6)
+                time.sleep(0.3)
                 items = container.find_elements(By.CSS_SELECTOR, 'div[id^="column-item-video-container-"]')
                 for item in items:
                     try:
@@ -165,32 +165,40 @@ def scroll_grid_and_collect_links(driver, wait, limit=None, max_scrolls=800, idl
     return list(links)
 
 def scrape_video_page(driver, url, wait, timeout=25):
-    import re, time, urllib.parse
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.support import expected_conditions as EC
-    from selenium.common.exceptions import TimeoutException
-
+    print(f"Scraping video page: {url}")
     driver.execute_script("window.open(arguments[0], '_blank');", url)
     driver.switch_to.window(driver.window_handles[-1])
+    # Force desktop viewport to avoid mobile/explore mode
+    driver.set_window_size(1920, 1080)
 
     def scroll_into_view(el):
         try:
             driver.execute_script("arguments[0].scrollIntoView({block:'center'});", el)
-            time.sleep(0.15)
+            time.sleep(0.05)
         except Exception:
             pass
 
     try:
+        # Try multiple selectors for caption across different TikTok layouts
         caption_text, hashtags = "", []
         caption_el = None
+        
+        # Desktop full-page layout selectors
         for by, sel in [
             (By.CSS_SELECTOR, '[data-e2e="browse-video-desc"]'),
             (By.XPATH, '//*[@data-e2e="browse-video-desc"]'),
+            (By.XPATH, '//*[@data-e2e="video-desc"]'),
+            (By.CSS_SELECTOR, 'h1[data-e2e="browse-video-desc"]'),
             (By.XPATH, '(//div[contains(@class,"DivMainContent")]//p)[1]'),
-            (By.XPATH, '(//div[contains(@class,"DivWrapper")]//p)[1]')
+            (By.XPATH, '(//div[contains(@class,"DivWrapper")]//p)[1]'),
+            (By.CSS_SELECTOR, 'span[data-e2e="view-video-desc"]'),
+            # Feed/explore layout selectors
+            (By.XPATH, '(//div[contains(@class,"DivSlideItemContainer")]//p)[1]'),
+            (By.XPATH, '(//div[@class="DivContainer"]//p)[1]'),
+            (By.CSS_SELECTOR, 'p[data-e2e="video-desc"]')
         ]:
             try:
-                caption_el = WebDriverWait(driver, timeout).until(
+                caption_el = WebDriverWait(driver, 2).until(
                     EC.presence_of_element_located((by, sel))
                 ); break
             except TimeoutException:
@@ -222,12 +230,16 @@ def scrape_video_page(driver, url, wait, timeout=25):
         like_txt = ""
         comment_txt = ""
 
+        # Try multiple selectors for engagement metrics across layouts
         for by, sel in [
             (By.CSS_SELECTOR, 'strong[data-e2e="like-count"]'),
             (By.XPATH, '//strong[@data-e2e="like-count"]'),
+            (By.XPATH, '//*[@data-e2e="like-count"]'),
+            (By.CSS_SELECTOR, '[data-e2e="video-like-count"]'),
+            (By.CSS_SELECTOR, 'div[data-e2e="video-like-count"]')
         ]:
             try:
-                el = WebDriverWait(driver, 6).until(EC.presence_of_element_located((by, sel)))
+                el = WebDriverWait(driver, 2).until(EC.presence_of_element_located((by, sel)))
                 scroll_into_view(el); like_txt = (el.text or "").strip()
                 if like_txt: break
             except TimeoutException:
@@ -236,9 +248,12 @@ def scrape_video_page(driver, url, wait, timeout=25):
         for by, sel in [
             (By.CSS_SELECTOR, 'strong[data-e2e="comment-count"]'),
             (By.XPATH, '//strong[@data-e2e="comment-count"]'),
+            (By.XPATH, '//*[@data-e2e="comment-count"]'),
+            (By.CSS_SELECTOR, '[data-e2e="video-comment-count"]'),
+            (By.CSS_SELECTOR, 'div[data-e2e="video-comment-count"]')
         ]:
             try:
-                el = WebDriverWait(driver, 6).until(EC.presence_of_element_located((by, sel)))
+                el = WebDriverWait(driver, 2).until(EC.presence_of_element_located((by, sel)))
                 scroll_into_view(el); comment_txt = (el.text or "").strip()
                 if comment_txt: break
             except TimeoutException:
@@ -273,6 +288,11 @@ def scrape_video_page(driver, url, wait, timeout=25):
                 scroll_into_view(el); comment_txt = (el.text or "").strip()
             except Exception: pass
 
+        print(f"Caption: {caption_text}")
+        print(f"Hashtags: {hashtags}")
+        print(f"Likes: {like_txt}")
+        print(f"Comments: {comment_txt}")
+        print("--------------------------------")
         return {
             "url": url,
             "caption": caption_text,
@@ -292,21 +312,30 @@ def scrape_profile_and_posts(username: str, *, headless: bool = False, max_posts
     profile_url = f"https://www.tiktok.com/@{username}"
 
     opts = webdriver.ChromeOptions()
+    try:
+        opts.page_load_strategy = 'eager'
+    except Exception:
+        pass
     if headless:
         opts.add_argument("--headless=new")
     opts.add_argument("--disable-blink-features=AutomationControlled")
     opts.add_argument("--start-maximized")
     opts.add_argument("--no-sandbox")
+    opts.add_argument("--window-size=1920,1080")
+    opts.add_argument("--disable-dev-shm-usage")
     opts.add_argument(
         "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36"
     )
     user_data_dir = os.environ.get("TIKTOK_USER_DATA_DIR", "").strip()
     if user_data_dir:
         opts.add_argument(f"--user-data-dir={user_data_dir}")
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(options=opts,service=service)
-    wait = WebDriverWait(driver, 30)
+    driver = webdriver.Chrome(options=opts, service=Service(ChromeDriverManager().install()))
+    try:
+        driver.set_page_load_timeout(25)
+    except Exception:
+        pass
+    wait = WebDriverWait(driver, 12)
 
     try:
         driver.get("https://www.tiktok.com/")
@@ -334,24 +363,24 @@ def scrape_profile_and_posts(username: str, *, headless: bool = False, max_posts
             except Exception:
                 pass
 
-        name = get_text(wait, [
+        name = get_text(driver, [
             (By.CSS_SELECTOR, '[data-e2e="user-title"] h1'),
             (By.CSS_SELECTOR, 'h1[data-e2e="user-title"]'),
             (By.CSS_SELECTOR, '[data-e2e="user-title"]'),
         ])
-        following_txt = get_text(wait, [
+        following_txt = get_text(driver, [
             (By.CSS_SELECTOR, '[data-e2e="following-count"]'),
             (By.XPATH, '//*[@data-e2e="following-count"]'),
         ])
-        followers_txt = get_text(wait, [
+        followers_txt = get_text(driver, [
             (By.CSS_SELECTOR, '[data-e2e="followers-count"]'),
             (By.XPATH, '//*[@data-e2e="followers-count"]'),
         ])
-        likes_txt = get_text(wait, [
+        likes_txt = get_text(driver, [
             (By.CSS_SELECTOR, '[data-e2e="likes-count"]'),
             (By.XPATH, '//*[@data-e2e="likes-count"]'),
         ])
-        bio = get_text(wait, [
+        bio = get_text(driver, [
             (By.CSS_SELECTOR, '[data-e2e="user-bio"]'),
             (By.XPATH, '//*[@data-e2e="user-bio"]'),
         ])
@@ -363,7 +392,7 @@ def scrape_profile_and_posts(username: str, *, headless: bool = False, max_posts
                 posts.append(scrape_video_page(driver, link, wait))
             except Exception as e:
                 posts.append({"url": link, "error": str(e)})
-            time.sleep(0.8)
+            time.sleep(0.2)
         print(f"Scraped {len(posts)} posts from @{username}")
         print("metrics:", {
             "following": parse_count(following_txt),
@@ -389,6 +418,6 @@ def scrape_profile_and_posts(username: str, *, headless: bool = False, max_posts
         driver.quit()
 
 if __name__ == "__main__":
-    data = scrape_profile_and_posts("thetransformix", headless=True, max_posts=40)    
+    data = scrape_profile_and_posts("thetransformix", headless=False, max_posts=100)    
     from pprint import pprint
     pprint(data)
