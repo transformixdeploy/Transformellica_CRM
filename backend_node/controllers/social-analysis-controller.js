@@ -127,7 +127,7 @@ const createSentimentAnalysis = asyncWrapper(
     }
 );
 
-const createSocialSWOT = asyncWrapper(
+const createInstagramAnalysis = asyncWrapper(
     async (req,res,next)=>{
 
         const user = await User.findOne({where: {email: req.user.email}});
@@ -151,6 +151,55 @@ const createSocialSWOT = asyncWrapper(
               country,
               goal,
               instagram_link
+            });
+
+            // save data to UserData
+            const createdUserData = await UserData.create({
+                title: `${country} - ${brandName} - {${new Date().toLocaleString()}}`,
+                data: response.data,
+                category: categories.SOCIAL_SWOT,
+                userId: user.id
+            });
+          
+            return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
+        }
+
+        // save data to UserData
+        const createdUserData = await UserData.create({
+            title: `${country} - ${brandName} - {${new Date().toLocaleString()}}`,
+            data: testData.socialSWOTTestData,
+            category: categories.SOCIAL_SWOT,
+            userId: user.id
+        });
+        
+        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
+    }
+);
+
+const createTikTokAnalysis = asyncWrapper(
+    async (req,res,next)=>{
+
+        const user = await User.findOne({where: {email: req.user.email}});
+
+        const limiteReached = await serviceLimitReachedHelperFunction(user.role, user.id, categories.SOCIAL_SWOT);
+
+        if(limiteReached){
+            return JSendResponser(res, HttpStatusCode.BAD_REQUEST, HttpStatusMessage.FAIL, {message: "Limit Reached for this service"});
+        }
+
+        const {business_description, company_name, country, goal, tiktok_link} = req.body;  
+        const brandName = tiktok_link.match(/(?:https?:\/\/)?(?:www\.)?tiktok\.com\/@([^/?#]+)/i)[1];
+
+        console.log("tiktok Link: ", tiktok_link);
+        console.log("Brand name: ", brandName);
+      
+        if(process.env.AI_SERVICE_TRANSFORMELLICA_URL){
+            const response = await axios.post(`${process.env.AI_SERVICE_TRANSFORMELLICA_URL}/social-analysis-tiktok`, {
+              business_description,
+              company_name,
+              country,
+              goal,
+              tiktok_link
             });
 
             // save data to UserData
@@ -326,7 +375,8 @@ export default {
     deleteUserData,
     getUserHistoryObjects,
     createSentimentAnalysis,
-    createSocialSWOT,
+    createTikTokAnalysis,
+    createInstagramAnalysis,
     createBrandingAudit,
     serviceLimitReached
 }

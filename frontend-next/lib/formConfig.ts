@@ -1,5 +1,5 @@
-import { BarChartBig, Globe, Brain, Palette, Image as ImageIcon, LucideIcon } from 'lucide-react';
-
+// Modified "formConfig.ts"
+import { Globe, Brain, Palette, Image as ImageIcon, LucideIcon, Video, Instagram} from 'lucide-react';
 
 // Service Interface
 export interface Service {
@@ -25,7 +25,8 @@ export interface Question {
 // A map that maps service-id to its related questions (each key is mapped to array of questions)
 interface QuestionsConfig {
   common: Question[];
-  social_media_swot: Question[];
+  instagram_analysis: Question[];
+  tiktok_analysis: Question[];
   website_audit_swot: Question[];
   customer_sentiment: Question[];
   branding_audit: Question[];
@@ -34,7 +35,8 @@ interface QuestionsConfig {
 
 // All the services we provide
 export const services: Service[] = [
-  { id: 'social_media_swot', name: 'Social media performance analytics', icon: BarChartBig, description: "Analyze social media strengths, weaknesses, opportunities, threats.", iconClassName: "w-6 h-6 mb-1 text-primary" },
+  { id: 'instagram_analysis', name: 'Instagram performance analytics', icon: Instagram, description: "Analyze Instagram strengths, weaknesses, opportunities, threats.", iconClassName: "w-6 h-6 mb-1 text-primary" },
+  { id: 'tiktok_analysis', name: 'TikTok performance analytics', icon: Video, description: "Analyze TikTok strengths, weaknesses, opportunities, threats.", iconClassName: "w-6 h-6 mb-1 text-primary" },
   { id: 'website_audit_swot', name: 'Website optimization analytics', icon: Globe, description: "SWOT analysis of website performance and structure.", iconClassName: "w-6 h-6 mb-1 text-primary" },
   { id: 'customer_sentiment', name: 'Customer Sentiment Analysis', icon: Brain, description: "Understand customer perception from online reviews.", iconClassName: "w-6 h-6 mb-1 text-primary" },
   { id: 'branding_audit', name: 'Branding Audit', icon: Palette, description: "Evaluate brand identity, consistency, and positioning.", iconClassName: "w-6 h-6 mb-1 text-primary" },
@@ -48,8 +50,11 @@ export const questionsConfig: QuestionsConfig = {
     { id: 'goal', label: "Main Goal for this Analysis?", type: 'text', placeholder: "e.g., Increase engagement", required: true },
     { id: 'country', label: "Primary Target Audience Country?", type: 'text', placeholder: "e.g., United States", required: true },
   ],
-  social_media_swot: [
+  instagram_analysis: [
     { id: 'instagramLink', label: "Instagram Profile Link?", type: 'url', placeholder: "https://instagram.com/yourprofile", required: true },
+  ],
+  tiktok_analysis: [
+    { id: 'tiktokLink', label: "TikTok Profile Link?", type: 'url', placeholder: "https://tiktok.com/@yourprofile", required: true },
   ],
   website_audit_swot: [
     { id: 'websiteUrl', label: "Company Website URL?", type: 'url', placeholder: "https://yourcompany.com", required: true },
@@ -67,16 +72,15 @@ export const questionsConfig: QuestionsConfig = {
 // function to return array of questions based on service-id
 export const getQuestionsForService = (serviceId: string): Question[] => {
   let serviceQuestions: Question[] = [];
-  const commonQuestions: Question[] = JSON.parse(JSON.stringify(questionsConfig.common)); 
-
+  const commonQuestions: Question[] = JSON.parse(JSON.stringify(questionsConfig.common));
   if (serviceId === 'all_in_one') {
     serviceQuestions = [
-      ...questionsConfig.social_media_swot,
+      ...questionsConfig.instagram_analysis,
       ...questionsConfig.website_audit_swot,
-      ...questionsConfig.customer_sentiment.filter(q => q.id !== 'websiteUrlSentiment'), 
+      ...questionsConfig.customer_sentiment.filter(q => q.id !== 'websiteUrlSentiment'),
       ...questionsConfig.branding_audit,
     ];
-    
+   
     const websiteUrlFromWebsiteAudit = questionsConfig.website_audit_swot.find(q => q.id === 'websiteUrl');
     if (websiteUrlFromWebsiteAudit) {
         const existingWebsiteQuestion = serviceQuestions.find(q => q.id === 'websiteUrl');
@@ -84,7 +88,6 @@ export const getQuestionsForService = (serviceId: string): Question[] => {
             serviceQuestions.unshift(websiteUrlFromWebsiteAudit);
         }
     }
-
     const uniqueQuestions: Question[] = [];
     const questionIds = new Set<string>();
     for (const q of serviceQuestions) {
@@ -97,14 +100,12 @@ export const getQuestionsForService = (serviceId: string): Question[] => {
   } else {
     serviceQuestions = questionsConfig[serviceId] ? [...questionsConfig[serviceId]] : [];
   }
-  
-  if (serviceId === 'social_media_swot') {
+ 
+  if (serviceId === 'instagram_analysis') {
      const businessDescriptionSocial = commonQuestions.find(q => q.id === 'businessDescription');
      if (businessDescriptionSocial) {
         businessDescriptionSocial.label = "Business Description?";
      }
   }
-
-
   return [...commonQuestions, ...serviceQuestions];
 };

@@ -1,10 +1,11 @@
+// Modified "serviceSelectionStep.tsx"
 "use client";
-
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
 import { Service } from '../../lib/formConfig';
-import { BarChart } from 'lucide-react'; // Import BarChart icon
+import { BarChartBig, ArrowLeft } from 'lucide-react'; // Import BarChart icon
 import Link from 'next/link';
 
 interface ServiceSelectionStepProps {
@@ -16,11 +17,63 @@ interface ServiceSelectionStepProps {
 
 // this component just returns list of cards for each service we provide
 // where each service card sets the "selectedService" variable in "MultiStepFormWizard" component when clicking on it using the "onSelect()" function it gets from the wizard component it self
-
 const ServiceSelectionStep: React.FC<ServiceSelectionStepProps> = ({ services, onSelect, direction, variants }) => {
+  const [showSocialSub, setShowSocialSub] = useState(false);
+
+  const socialServices = services.filter(s => s.id === 'instagram_analysis' || s.id === 'tiktok_analysis');
+  const otherServices = services.filter(s => s.id !== 'instagram_analysis' && s.id !== 'tiktok_analysis');
+
+  if (showSocialSub) {
+    return (
+      <motion.div
+        key="socialSubSelection"
+        custom={direction}
+        variants={variants}
+        initial="enter"
+        animate="center"
+        exit="exit"
+        transition={{ type: 'spring', stiffness: 300, damping: 30, duration: 0.3 }}
+        className="space-y-4"
+      >
+        <Button 
+          onClick={() => setShowSocialSub(false)} 
+          variant="outline" 
+          className="w-full sm:w-auto hover:border-primary/50 text-sm md:text-base"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Main Services
+        </Button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+          {socialServices.map(service => {
+            const Icon = service.icon;
+            return (
+              <motion.div
+                key={service.id}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+              >
+                <Card
+                  onClick={() => onSelect(service)}
+                  className="cursor-pointer hover:border-primary transition-all duration-200 h-full flex flex-col items-center justify-center text-center p-3 md:p-4 bg-background/50 hover:bg-muted/50"
+                >
+                  <CardHeader className="p-1 md:p-2 text-center flex flex-col items-center">
+                    <Icon className="w-6 h-6 mb-1 text-primary"/>
+                    <CardTitle className="text-sm md:text-md font-semibold">{service.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-1 md:p-2 text-xs md:text-sm text-muted-foreground">
+                    {service.description}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )
+          })}
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
-      key="serviceSelection"
+      key="mainServiceSelection"
       custom={direction}
       variants={variants}
       initial="enter"
@@ -29,26 +82,46 @@ const ServiceSelectionStep: React.FC<ServiceSelectionStepProps> = ({ services, o
       transition={{ type: 'spring', stiffness: 300, damping: 30, duration: 0.3 }}
       className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4"
     >
-      {services.map(service => {
-        const Icon = service.icon;
-        return (<motion.div
-          key={service.id}
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
+      <motion.div
+        key="social_analysis"
+        whileHover={{ scale: 1.03 }}
+        whileTap={{ scale: 0.97 }}
+      >
+        <Card
+          onClick={() => setShowSocialSub(true)}
+          className="cursor-pointer hover:border-primary transition-all duration-200 h-full flex flex-col items-center justify-center text-center p-3 md:p-4 bg-background/50 hover:bg-muted/50"
         >
-          <Card 
-            onClick={() => onSelect(service)}
-            className="cursor-pointer hover:border-primary transition-all duration-200 h-full flex flex-col items-center justify-center text-center p-3 md:p-4 bg-background/50 hover:bg-muted/50"
+          <CardHeader className="p-1 md:p-2 text-center flex flex-col items-center">
+            <BarChartBig className="w-6 h-6 mb-1 text-primary"/>
+            <CardTitle className="text-sm md:text-md font-semibold">Social Analysis</CardTitle>
+          </CardHeader>
+          <CardContent className="p-1 md:p-2 text-xs md:text-sm text-muted-foreground">
+            {"Analyze your social media platforms' strengths, weaknesses, opportunities, and threats."}
+          </CardContent>
+        </Card>
+      </motion.div>
+      {otherServices.map(service => {
+        const Icon = service.icon;
+        return (
+          <motion.div
+            key={service.id}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
           >
-            <CardHeader className="p-1 md:p-2 text-center flex flex-col items-center">
-              <Icon className="w-6 h-6 mb-1 text-primary"/>
-              <CardTitle className="text-sm md:text-md font-semibold">{service.name}</CardTitle>
-            </CardHeader>
-            <CardContent className="p-1 md:p-2 text-xs md:text-sm text-muted-foreground">
-              {service.description}
-            </CardContent>
-          </Card>
-        </motion.div>)
+            <Card
+              onClick={() => onSelect(service)}
+              className="cursor-pointer hover:border-primary transition-all duration-200 h-full flex flex-col items-center justify-center text-center p-3 md:p-4 bg-background/50 hover:bg-muted/50"
+            >
+              <CardHeader className="p-1 md:p-2 text-center flex flex-col items-center">
+                <Icon className="w-6 h-6 mb-1 text-primary"/>
+                <CardTitle className="text-sm md:text-md font-semibold">{service.name}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-1 md:p-2 text-xs md:text-sm text-muted-foreground">
+                {service.description}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )
       })}
       <motion.div
         key="biAnalystTool"
@@ -60,7 +133,7 @@ const ServiceSelectionStep: React.FC<ServiceSelectionStepProps> = ({ services, o
             className="cursor-pointer hover:border-primary transition-all duration-200 h-full flex flex-col items-center justify-center text-center p-3 md:p-4 bg-background/50 hover:bg-muted/50"
           >
             <CardHeader className="p-1 md:p-2 text-center flex flex-col items-center">
-              <BarChart className="w-6 h-6 mb-1 text-primary"/>
+              <BarChartBig className="w-6 h-6 mb-1 text-primary"/>
               <CardTitle className="text-sm md:text-md font-semibold">BI Analyst Tool</CardTitle>
             </CardHeader>
             <CardContent className="p-1 md:p-2 text-xs md:text-sm text-muted-foreground">

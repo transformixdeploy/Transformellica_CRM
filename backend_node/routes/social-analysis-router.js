@@ -13,8 +13,11 @@ router.route("/website-swot")
 router.route("/sentiment-analysis")
     .post(socialAnalysisController.createSentimentAnalysis);
 
-router.route("/social-swot")
-    .post(socialAnalysisController.createSocialSWOT);
+router.route("/instagram-analysis")
+    .post(socialAnalysisController.createInstagramAnalysis);
+
+router.route("/tiktok-analysis")
+    .post(socialAnalysisController.createTikTokAnalysis);
 
 router.route("/branding-audit")
     .post(upload.single("logoUpload") , socialAnalysisController.createBrandingAudit);

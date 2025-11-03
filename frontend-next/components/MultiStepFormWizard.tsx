@@ -1,5 +1,5 @@
+// Modified "multistepFormWizard.tsx"
 "use client";
-
 import React, { useContext, useState } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from './ui/card';
@@ -11,7 +11,7 @@ import QuestionRenderer from './form/QuestionRenderer';
 import FormNavigation from './form/FormNavigation';
 import { services, getQuestionsForService, Service, Question } from '../lib/formConfig';
 import { useRouter } from 'next/navigation';
-import { checkServiceLimitReached, createBrandAuditData, createSentimentAnalysisData, createSocialSWOTData, createWebsiteSWOTData } from '@/utilities/axiosRequester';
+import { checkServiceLimitReached, createBrandAuditData, createSentimentAnalysisData, createInstagramAnalysisData, createWebsiteSWOTData, createTikTokAnalysisData } from '@/utilities/axiosRequester';
 import { AuthContext } from '@/context/AuthContext';
 import { userDataCategories } from '@/lib/constants';
 
@@ -19,7 +19,7 @@ const slideVariants: Variants = {
   enter: (direction: number) => ({ x: direction > 0 ? '100%' : '-100%', opacity: 0 }),
   center: { x: 0, opacity: 1 },
   exit: (direction: number) => ({ x: direction < 0 ? '100%' : '-100%', opacity: 0 }),
-}; 
+};
 
 interface FormData {
   [key: string]: string | File | null;
@@ -37,7 +37,7 @@ interface MultiStepFormWizardProps {
   setSentimentAnalysing: (analysing: boolean) => void;
 }
 
-// As this wizard is being called by another page that renders a modal to show this 
+// As this wizard is being called by another page that renders a modal to show this
 // wizard so the page should page the "onClose" function so the wizard can use it to close the modal that was opened earlier
 const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setWebAnalysing, setSocialAnalysing, setBrandingAnalysing, setSentimentAnalysing }) => {
   const [currentStep, setCurrentStep] = useState<number>(0);
@@ -48,12 +48,11 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
   const [showAuthError, setShowAuthError] = useState(false);
   const [limitError, setLimitError] = useState("");
   const router = useRouter();
-
   const {isAuthenticated, accessToken, user} = useContext(AuthContext);
 
   const wizardSteps: Question[] = selectedService ? getQuestionsForService(selectedService.id) : [];
   const totalQuestionSteps: number = selectedService ? wizardSteps.length : 0;
-  const totalWizardableSteps: number = totalQuestionSteps + 1; 
+  const totalWizardableSteps: number = totalQuestionSteps + 1;
   const progress: number = selectedService ? ((currentStep) / totalWizardableSteps) * 100 : 0;
 
   const validateField = (id: string, value: string | File | null): string => {
@@ -72,20 +71,18 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
     return '';
   };
 
-  // we will pass this function to the "ServiceSelectionStep" component so it can use this function to set the "selectedService" variable here 
+  // we will pass this function to the "ServiceSelectionStep" component so it can use this function to set the "selectedService" variable here
   // as the "ServiceSelectionStep" component is expecting a function called "onSelect()" in its props
   const handleServiceSelect = async (service: Service) => {
-
-
     if(!isAuthenticated){
       setShowAuthError(true);
       return;
     }
-    
-
+   
     if(
       (service.id === "website_audit_swot" && await checkServiceLimitReached(userDataCategories.WEBSITE_SWOT)) ||
-      (service.id === "social_media_swot" && await checkServiceLimitReached(userDataCategories.SOCIAL_SWOT)) ||
+      (service.id === "instagram_analysis" && await checkServiceLimitReached(userDataCategories.SOCIAL_SWOT)) ||
+      (service.id === "tiktok_analysis" && await checkServiceLimitReached(userDataCategories.SOCIAL_SWOT)) ||
       (service.id === "branding_audit" && await checkServiceLimitReached(userDataCategories.BRAND_AUDIT)) ||
       (service.id === "customer_sentiment" && await checkServiceLimitReached(userDataCategories.SENTIMENT))
     ){
@@ -94,12 +91,11 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
     }else{
       setLimitError("");
     }
-    
-
+   
     setDirection(1);
     setSelectedService(service);
     setCurrentStep(1);
-    setFormData({}); 
+    setFormData({});
     setFormErrors({});
   };
 
@@ -137,10 +133,10 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
       setCurrentStep(prev => prev - 1);
     }
   };
-  
+ 
   const handleSubmit = async () => {
     // No user concept, no authentication check
-    
+   
     const submissionData = {
       service_id: selectedService?.id,
       service_name: selectedService?.name,
@@ -150,6 +146,7 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
       goal: formData.goal || null,
       country: formData.country || null,
       instagram_link: formData.instagramLink || null,
+      tiktok_link: formData.tiktokLink || null,
       website_url: formData.websiteUrl || null,
       website_url_sentiment: formData.websiteUrlSentiment || null,
       google_maps_link: formData.googleMapsLink || null,
@@ -157,13 +154,12 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
       other_reviews_link: formData.otherReviewsLink || null,
       logo_upload_details: formData.logoUpload instanceof File ? `File: ${formData.logoUpload.name} (Type: ${formData.logoUpload.type}, Size: ${formData.logoUpload.size} bytes)` : null,
       brand_guidelines_upload_details: formData.brandGuidelinesUpload instanceof File ? `File: ${formData.brandGuidelinesUpload.name} (Type: ${formData.brandGuidelinesUpload.type}, Size: ${formData.brandGuidelinesUpload.size} bytes)` : null,
-      raw_form_data: formData 
+      raw_form_data: formData
     };
-    
-    if(submissionData.service_id === "social_media_swot"){
-
+   
+    if(submissionData.service_id === "instagram_analysis"){
       setSocialAnalysing(true);
-      
+     
       const form = {
         business_description: submissionData.business_description,
         company_name: submissionData.company_name,
@@ -171,14 +167,27 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
         goal: submissionData.goal,
         instagram_link: submissionData.instagram_link
       }
-      
-      const createdDataId = (await createSocialSWOTData(form)).data.id;
+     
+      const createdDataId = (await createInstagramAnalysisData(form)).data.id;
       router.push(`/social-swot/${createdDataId}`);
-    
+   
+    }else if(submissionData.service_id === "tiktok_analysis"){
+      setSocialAnalysing(true);
+     
+      const form = {
+        business_description: submissionData.business_description,
+        company_name: submissionData.company_name,
+        country: submissionData.country,
+        goal: submissionData.goal,
+        tiktok_link: submissionData.tiktok_link
+      }
+     
+      const createdDataId = (await createTikTokAnalysisData(form)).data.id;
+      router.push(`/social-swot/${createdDataId}`);
+   
     }else if(submissionData.service_id === "website_audit_swot"){
-      
+     
       setWebAnalysing(true);
-
       const form = {
         business_description: submissionData.business_description,
         company_name: submissionData.company_name,
@@ -186,14 +195,12 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
         goal: submissionData.goal,
         website_url: submissionData.website_url
       }
-      
+     
       const createdDataId = (await createWebsiteSWOTData(form)).data.id;
       router.push(`/website-swot/${createdDataId}`);
-
     }else if(submissionData.service_id === "customer_sentiment"){
-
       setSentimentAnalysing(true);
-      
+     
       const form = {
         company_name: submissionData.company_name,
         business_description: submissionData.business_description,
@@ -201,14 +208,11 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
         country: submissionData.country,
         industry_field: submissionData.industry,
       }
-
       const createdDataId = (await createSentimentAnalysisData(form)).data.id;
       router.push(`/customer-sentiment/${createdDataId}`);
-
     }else if(submissionData.service_id === "branding_audit"){
-
       setBrandingAnalysing(true);
-      
+     
       const form = new FormData();
       form.append("company_name", submissionData.company_name || "");
       form.append("business_description", submissionData.business_description || "");
@@ -217,14 +221,13 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
       form.append("website_url", submissionData.website_url || "");
       form.append("instagram_link", submissionData.instagram_link || "");
       form.append("logoUpload", submissionData.raw_form_data.logoUpload || new File([], ""));
-      
-      
+     
+     
       const createdDataId = (await createBrandAuditData(form)).data.id;
       router.push(`/branding-audit/${createdDataId}`);
     }
-    
+   
     try {
-
       if (onClose) {
         onClose(); // Call onClose to close the modal
       }
@@ -237,7 +240,6 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
         setBrandingAnalysing(false);
         setSentimentAnalysing(false);
       }, 500);
-
     } catch (error) {
       console.error('Supabase submission error:', error);
       setWebAnalysing(false);
@@ -251,9 +253,9 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
       setSentimentAnalysing(false);
     }
   };
-  
+ 
   const isCurrentFieldValid = currentQuestion ? !validateField(currentQuestion.id, formData[currentQuestion.id]) : true;
-  
+ 
   const wizardContent = (
     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }} className="flex flex-col flex-grow">
       <CardHeader className="items-center">
@@ -267,22 +269,19 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
           </p>
         )}
       </CardHeader>
-
       {selectedService && currentStep > 0 && (
         <div className="px-4 md:px-6 pt-2 pb-2 md:pb-4">
           <ProgressBar progress={progress} currentStep={currentStep} totalSteps={totalQuestionSteps} />
           <MotivationalMessage progress={progress} />
         </div>
       )}
-
-        {showAuthError && 
+        {showAuthError &&
           <div className="m-3 flex items-center gap-2 px-3 py-2 text-sm text-red-600 bg-red-50 dark:bg-red-950 dark:text-red-300 rounded-md">
             <AlertCircle className="h-4 w-4" />
             <span>Login required</span>
           </div>
         }
-
-        {limitError.length > 0 &&  
+        {limitError.length > 0 &&
           <div className='flex flex-col text-center items-center'>
             <div className="m-3 flex items-center gap-2 px-3 py-2 text-sm text-yellow-400 bg-yellow-50 dark:bg-yellow-950 dark:text-yellow-300 rounded-md">
               <AlertCircle className="h-4 w-4" />
@@ -290,7 +289,7 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
             </div>
           </div>
         }
-      
+     
       <CardContent className="pt-0 px-4 md:px-6 py-4 flex-grow overflow-y-auto relative min-h-[250px] md:min-h-[300px]">
         <AnimatePresence initial={false} custom={direction} mode="wait">
           {!selectedService || currentStep === 0 ? (
@@ -308,7 +307,7 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
               value={formData[currentQuestion.id] || ''}
               error={formErrors[currentQuestion.id]}
               onChange={handleChange}
-              onFileChange={handleChange} 
+              onFileChange={handleChange}
               direction={direction}
               variants={slideVariants}
             />
@@ -328,9 +327,8 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
               <p className="text-muted-foreground text-sm md:text-base">{"You've answered all questions. Ready to submit your request?"}</p>
             </motion.div>
           )}
-
           {/*isSubmitting && (
-            <motion.div 
+            <motion.div
               key="submitting"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="absolute inset-0 flex flex-col items-center justify-center bg-card/80 backdrop-blur-sm z-50"
@@ -342,7 +340,6 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
           )*/}
         </AnimatePresence>
       </CardContent>
-
       <div className="p-6 pt-2 border-t border-border/30">
         <FormNavigation
           currentStep={currentStep}
@@ -358,7 +355,6 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
       </div>
     </motion.div>
   );
-
   return (
     <Card className="w-full max-w-xl mx-auto shadow-xl max-h-full overflow-y-auto">
       {wizardContent}

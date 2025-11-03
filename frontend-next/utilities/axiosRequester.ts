@@ -81,8 +81,12 @@ async function createWebsiteSWOTData(form: {}) : Promise<{status: string, data: 
     return responseFormat(await apiClient.post(`/social/website-swot`, form));
 }
 
-async function createSocialSWOTData(form: {}) : Promise<{status: string, data: {id:string}}>{
-    return responseFormat(await apiClient.post(`/social/social-swot`, form));
+async function createInstagramAnalysisData(form: {}) : Promise<{status: string, data: {id:string}}>{
+    return responseFormat(await apiClient.post(`/social/instagram-analysis`, form));
+}
+
+async function createTikTokAnalysisData(form: {}) : Promise<{status: string, data: {id:string}}>{
+    return responseFormat(await apiClient.post(`/social/tiktok-analysis`, form));
 }
 
 async function createSentimentAnalysisData(form: {}) : Promise<{status: string, data: {id:string} }>{
@@ -126,7 +130,8 @@ export {
     getUserData,
     getDataHistory,
     deleteUserData,
-    createSocialSWOTData,
+    createInstagramAnalysisData,
+    createTikTokAnalysisData,
     createSentimentAnalysisData,
     createBrandAuditData,
     login,
