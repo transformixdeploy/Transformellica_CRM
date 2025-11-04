@@ -45,7 +45,6 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
   const [formData, setFormData] = useState<FormData>({});
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [direction, setDirection] = useState<number>(0);
-  const [showAuthError, setShowAuthError] = useState(false);
   const [limitError, setLimitError] = useState("");
   const router = useRouter();
   const {isAuthenticated, accessToken, user} = useContext(AuthContext);
@@ -75,8 +74,7 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
   // as the "ServiceSelectionStep" component is expecting a function called "onSelect()" in its props
   const handleServiceSelect = async (service: Service) => {
     if(!isAuthenticated){
-      setShowAuthError(true);
-      return;
+      return router.push("/auth");
     }
    
     if(
@@ -275,12 +273,6 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
           <MotivationalMessage progress={progress} />
         </div>
       )}
-        {showAuthError &&
-          <div className="m-3 flex items-center gap-2 px-3 py-2 text-sm text-red-600 bg-red-50 dark:bg-red-950 dark:text-red-300 rounded-md">
-            <AlertCircle className="h-4 w-4" />
-            <span>Login required</span>
-          </div>
-        }
         {limitError.length > 0 &&
           <div className='flex flex-col text-center items-center'>
             <div className="m-3 flex items-center gap-2 px-3 py-2 text-sm text-yellow-400 bg-yellow-50 dark:bg-yellow-950 dark:text-yellow-300 rounded-md">
