@@ -81,6 +81,7 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
       (service.id === "website_audit_swot" && await checkServiceLimitReached(userDataCategories.WEBSITE_SWOT)) ||
       (service.id === "instagram_analysis" && await checkServiceLimitReached(userDataCategories.SOCIAL_SWOT)) ||
       (service.id === "tiktok_analysis" && await checkServiceLimitReached(userDataCategories.SOCIAL_SWOT)) ||
+      (service.id === "all_social_analysis" && await checkServiceLimitReached(userDataCategories.SOCIAL_SWOT)) ||
       (service.id === "branding_audit" && await checkServiceLimitReached(userDataCategories.BRAND_AUDIT)) ||
       (service.id === "customer_sentiment" && await checkServiceLimitReached(userDataCategories.SENTIMENT))
     ){
@@ -223,6 +224,35 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
      
       const createdDataId = (await createBrandAuditData(form)).data.id;
       router.push(`/branding-audit/${createdDataId}`);
+    }else if(submissionData.service_id === "all_social_analysis"){
+
+      setSocialAnalysing(true);
+     
+      const tiktokForm = {
+        business_description: submissionData.business_description,
+        company_name: submissionData.company_name,
+        country: submissionData.country,
+        goal: submissionData.goal,
+        tiktok_link: submissionData.tiktok_link
+      }
+
+      const instagramForm = {
+        business_description: submissionData.business_description,
+        company_name: submissionData.company_name,
+        country: submissionData.country,
+        goal: submissionData.goal,
+        instagram_link: submissionData.instagram_link
+      }
+
+      const [tiktokResponse, instagramResponse] = await Promise.all([
+        createTikTokAnalysisData(tiktokForm),
+        createInstagramAnalysisData(instagramForm)
+      ]);
+
+      const createdTiktokAnalysisId = tiktokResponse.data.id;
+      const createdInstagramAnalysisId = instagramResponse.data.id;
+
+      router.push(`/social-swot`);
     }
    
     try {
@@ -296,7 +326,7 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
             <QuestionRenderer
               key={`question-${currentQuestion.id}`}
               question={currentQuestion}
-              value={formData[currentQuestion.id] || ''}
+              value={formData[currentQuestion.id] || ""}
               error={formErrors[currentQuestion.id]}
               onChange={handleChange}
               onFileChange={handleChange}
@@ -339,7 +369,7 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
           onBack={handleBack}
           onNext={handleNext}
           isSubmitting={false}
-          isContinueDisabled={!!(currentQuestion && currentQuestion.required && !isCurrentFieldValid)}
+          isContinueDisabled={(currentQuestion! && currentQuestion.required && !formData[currentQuestion.id])}
           showCancel={false} // Always hide cancel button
           submitButtonText="Submit Request"
         />

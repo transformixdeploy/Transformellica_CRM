@@ -1,4 +1,3 @@
-// Modified "serviceSelectionStep.tsx"
 "use client";
 import React, { useState } from 'react';
 import { motion, Variants } from 'framer-motion';
@@ -20,8 +19,10 @@ interface ServiceSelectionStepProps {
 const ServiceSelectionStep: React.FC<ServiceSelectionStepProps> = ({ services, onSelect, direction, variants }) => {
   const [showSocialSub, setShowSocialSub] = useState(false);
 
-  const socialServices = services.filter(s => s.id === 'instagram_analysis' || s.id === 'tiktok_analysis');
-  const otherServices = services.filter(s => s.id !== 'instagram_analysis' && s.id !== 'tiktok_analysis');
+  // Filter to get social analysis services only as we will need an array of them later to show them seperatly
+  const socialServices = services.filter(s => s.id === 'instagram_analysis' || s.id === 'tiktok_analysis' || s.id === 'all_social_analysis');
+  // Filter to get the rest of services
+  const otherServices = services.filter(s => s.id !== 'instagram_analysis' && s.id !== 'tiktok_analysis' && s.id !== 'all_social_analysis');
 
   if (showSocialSub) {
     return (
@@ -42,6 +43,8 @@ const ServiceSelectionStep: React.FC<ServiceSelectionStepProps> = ({ services, o
         >
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Main Services
         </Button>
+
+        {/* Social analysis services */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
           {socialServices.map(service => {
             const Icon = service.icon;
@@ -53,7 +56,7 @@ const ServiceSelectionStep: React.FC<ServiceSelectionStepProps> = ({ services, o
               >
                 <Card
                   onClick={() => onSelect(service)}
-                  className="cursor-pointer hover:border-primary transition-all duration-200 h-full flex flex-col items-center justify-center text-center p-3 md:p-4 bg-background/50 hover:bg-muted/50"
+                  className="cursor-pointer hover:border-primary transition-all duration-200 h-full flex flex-col justify-center text-center p-3 md:p-4 bg-background/50 hover:bg-muted/50"
                 >
                   <CardHeader className="p-1 md:p-2 text-center flex flex-col items-center">
                     <Icon className="w-6 h-6 mb-1 text-primary"/>
@@ -82,6 +85,8 @@ const ServiceSelectionStep: React.FC<ServiceSelectionStepProps> = ({ services, o
       transition={{ type: 'spring', stiffness: 300, damping: 30, duration: 0.3 }}
       className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4"
     >
+
+      {/* Social analysis main service */}
       <motion.div
         key="social_analysis"
         whileHover={{ scale: 1.03 }}
@@ -89,7 +94,7 @@ const ServiceSelectionStep: React.FC<ServiceSelectionStepProps> = ({ services, o
       >
         <Card
           onClick={() => setShowSocialSub(true)}
-          className="cursor-pointer hover:border-primary transition-all duration-200 h-full flex flex-col items-center justify-center text-center p-3 md:p-4 bg-background/50 hover:bg-muted/50"
+          className="cursor-pointer hover:border-primary transition-all duration-200 h-full flex flex-col justify-center text-center p-3 md:p-4 bg-background/50 hover:bg-muted/50"
         >
           <CardHeader className="p-1 md:p-2 text-center flex flex-col items-center">
             <BarChartBig className="w-6 h-6 mb-1 text-primary"/>
@@ -100,6 +105,8 @@ const ServiceSelectionStep: React.FC<ServiceSelectionStepProps> = ({ services, o
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Rest of services */}
       {otherServices.map(service => {
         const Icon = service.icon;
         return (
@@ -110,7 +117,7 @@ const ServiceSelectionStep: React.FC<ServiceSelectionStepProps> = ({ services, o
           >
             <Card
               onClick={() => onSelect(service)}
-              className="cursor-pointer hover:border-primary transition-all duration-200 h-full flex flex-col items-center justify-center text-center p-3 md:p-4 bg-background/50 hover:bg-muted/50"
+              className="cursor-pointer hover:border-primary transition-all duration-200 h-full flex flex-col justify-center text-center p-3 md:p-4 bg-background/50 hover:bg-muted/50"
             >
               <CardHeader className="p-1 md:p-2 text-center flex flex-col items-center">
                 <Icon className="w-6 h-6 mb-1 text-primary"/>
@@ -123,6 +130,8 @@ const ServiceSelectionStep: React.FC<ServiceSelectionStepProps> = ({ services, o
           </motion.div>
         )
       })}
+
+      {/* Bi Analysis service */}
       <motion.div
         key="biAnalystTool"
         whileHover={{ scale: 1.03 }}
@@ -130,7 +139,7 @@ const ServiceSelectionStep: React.FC<ServiceSelectionStepProps> = ({ services, o
       >
         <Link href={"/bi-analysis/how-it-works"}>
           <Card
-            className="cursor-pointer hover:border-primary transition-all duration-200 h-full flex flex-col items-center justify-center text-center p-3 md:p-4 bg-background/50 hover:bg-muted/50"
+            className="cursor-pointer hover:border-primary transition-all duration-200 h-full flex flex-col justify-center text-center p-3 md:p-4 bg-background/50 hover:bg-muted/50"
           >
             <CardHeader className="p-1 md:p-2 text-center flex flex-col items-center">
               <BarChartBig className="w-6 h-6 mb-1 text-primary"/>
@@ -142,6 +151,8 @@ const ServiceSelectionStep: React.FC<ServiceSelectionStepProps> = ({ services, o
           </Card>
         </Link>
       </motion.div>
+
+
     </motion.div>
   );
 };
