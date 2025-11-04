@@ -8,6 +8,8 @@ from selenium.common.exceptions import TimeoutException, StaleElementReferenceEx
 import re, time, urllib.parse, os, json
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
+import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 def to_western_digits(s: str) -> str:
     arabic_map  = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
@@ -170,7 +172,10 @@ def scrape_video_page(driver, url, wait, timeout=25):
     driver.switch_to.window(driver.window_handles[-1])
     # Force desktop viewport to avoid mobile/explore mode
     driver.set_window_size(1920, 1080)
-
+    driver.save_screenshot('video.png')
+    with open('video.html', 'w', encoding='utf-8') as f:
+        f.write(driver.page_source)
+    logging.critical("Saved debug screenshot and HTML. Check video.png!")
     def scroll_into_view(el):
         try:
             driver.execute_script("arguments[0].scrollIntoView({block:'center'});", el)
@@ -182,7 +187,7 @@ def scrape_video_page(driver, url, wait, timeout=25):
         # Try multiple selectors for caption across different TikTok layouts
         caption_text, hashtags = "", []
         caption_el = None
-        
+
         # Desktop full-page layout selectors
         for by, sel in [
             (By.CSS_SELECTOR, '[data-e2e="browse-video-desc"]'),
@@ -192,6 +197,8 @@ def scrape_video_page(driver, url, wait, timeout=25):
             (By.XPATH, '(//div[contains(@class,"DivMainContent")]//p)[1]'),
             (By.XPATH, '(//div[contains(@class,"DivWrapper")]//p)[1]'),
             (By.CSS_SELECTOR, 'span[data-e2e="view-video-desc"]'),
+            # Photo-specific fallbacks
+            (By.CSS_SELECTOR, '[data-e2e="photo-desc"], [data-e2e="browse-photo-desc"]'),
             # Feed/explore layout selectors
             (By.XPATH, '(//div[contains(@class,"DivSlideItemContainer")]//p)[1]'),
             (By.XPATH, '(//div[@class="DivContainer"]//p)[1]'),
@@ -236,7 +243,9 @@ def scrape_video_page(driver, url, wait, timeout=25):
             (By.XPATH, '//strong[@data-e2e="like-count"]'),
             (By.XPATH, '//*[@data-e2e="like-count"]'),
             (By.CSS_SELECTOR, '[data-e2e="video-like-count"]'),
-            (By.CSS_SELECTOR, 'div[data-e2e="video-like-count"]')
+            (By.CSS_SELECTOR, 'div[data-e2e="video-like-count"]'),
+            # Photo fallbacks
+            (By.CSS_SELECTOR, '[data-e2e*="photo"][data-e2e$="like-count"] strong')
         ]:
             try:
                 el = WebDriverWait(driver, 2).until(EC.presence_of_element_located((by, sel)))
@@ -250,7 +259,9 @@ def scrape_video_page(driver, url, wait, timeout=25):
             (By.XPATH, '//strong[@data-e2e="comment-count"]'),
             (By.XPATH, '//*[@data-e2e="comment-count"]'),
             (By.CSS_SELECTOR, '[data-e2e="video-comment-count"]'),
-            (By.CSS_SELECTOR, 'div[data-e2e="video-comment-count"]')
+            (By.CSS_SELECTOR, 'div[data-e2e="video-comment-count"]'),
+            # Photo fallbacks
+            (By.CSS_SELECTOR, '[data-e2e*="photo"][data-e2e$="comment-count"] strong')
         ]:
             try:
                 el = WebDriverWait(driver, 2).until(EC.presence_of_element_located((by, sel)))
@@ -284,10 +295,15 @@ def scrape_video_page(driver, url, wait, timeout=25):
             except Exception: pass
         if not comment_txt:
             try:
-                el = driver.find_element(By.XPATH, '//button[.//span[contains(@data-e2e,"comment")]]//strong')
+                el = driver.find_element(By.XPATH, '//button[.//span[contains(@data-e2e,"comment")]]//strong')                
                 scroll_into_view(el); comment_txt = (el.text or "").strip()
             except Exception: pass
-
+        
+        if "/photo/" in url:
+            driver.save_screenshot('photo_metrics.png')
+            with open('photo_metrics.html', 'w', encoding='utf-8') as f:
+                f.write(driver.page_source)
+            logging.critical("Saved debug screenshot and HTML for photo page. Check photo_metrics.png!")
         print(f"Caption: {caption_text}")
         print(f"Hashtags: {hashtags}")
         print(f"Likes: {like_txt}")
@@ -308,9 +324,7 @@ def scrape_video_page(driver, url, wait, timeout=25):
 
 
 
-def scrape_profile_and_posts(username: str, *, headless: bool = False, max_posts: int | None = 12):
-    profile_url = f"https://www.tiktok.com/@{username}"
-
+def _build_chrome_options(headless: bool):
     opts = webdriver.ChromeOptions()
     try:
         opts.page_load_strategy = 'eager'
@@ -318,11 +332,15 @@ def scrape_profile_and_posts(username: str, *, headless: bool = False, max_posts
         pass
     if headless:
         opts.add_argument("--headless=new")
+    chrome_bin = os.environ.get("GOOGLE_CHROME_BIN") or os.environ.get("CHROME_BIN")
+    if chrome_bin:
+        opts.binary_location = chrome_bin
     opts.add_argument("--disable-blink-features=AutomationControlled")
     opts.add_argument("--start-maximized")
     opts.add_argument("--no-sandbox")
     opts.add_argument("--window-size=1920,1080")
     opts.add_argument("--disable-dev-shm-usage")
+    opts.add_argument("--disable-gpu")
     opts.add_argument(
         "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36"
@@ -330,6 +348,117 @@ def scrape_profile_and_posts(username: str, *, headless: bool = False, max_posts
     user_data_dir = os.environ.get("TIKTOK_USER_DATA_DIR", "").strip()
     if user_data_dir:
         opts.add_argument(f"--user-data-dir={user_data_dir}")
+    return opts
+
+
+def _scrape_post_standalone(url: str, *, headless: bool) -> dict:
+    opts = _build_chrome_options(headless=headless)
+    driver = webdriver.Chrome(options=opts, service=Service(ChromeDriverManager().install()))
+    try:
+        try:
+            driver.set_page_load_timeout(25)
+        except Exception:
+            pass
+        wait = WebDriverWait(driver, 12)
+        driver.set_window_size(1920, 1080)
+        driver.get(url)
+
+        # Use the same logic paths as in scrape_video_page, inline to avoid window juggling
+        def scroll_into_view(el):
+            try:
+                driver.execute_script("arguments[0].scrollIntoView({block:'center'});", el)
+                time.sleep(0.05)
+            except Exception:
+                pass
+
+        caption_text, hashtags = "", []
+        caption_el = None
+        for by, sel in [
+            (By.CSS_SELECTOR, '[data-e2e="browse-video-desc"]'),
+            (By.XPATH, '//*[@data-e2e="browse-video-desc"]'),
+            (By.XPATH, '//*[@data-e2e="video-desc"]'),
+            (By.CSS_SELECTOR, 'h1[data-e2e="browse-video-desc"]'),
+            (By.XPATH, '(//div[contains(@class, "DivMainContent")]//p)[1]'),
+            (By.XPATH, '(//div[contains(@class, "DivWrapper")]//p)[1]'),
+            (By.CSS_SELECTOR, 'span[data-e2e="view-video-desc"]'),
+            (By.CSS_SELECTOR, '[data-e2e="photo-desc"], [data-e2e="browse-photo-desc"]'),
+            (By.CSS_SELECTOR, 'p[data-e2e="video-desc"]'),
+        ]:
+            try:
+                caption_el = WebDriverWait(driver, 2).until(EC.presence_of_element_located((by, sel)))
+                break
+            except TimeoutException:
+                continue
+        if caption_el:
+            scroll_into_view(caption_el)
+            try:
+                caption_text = (caption_el.text or "").strip()
+                tag_container = caption_el
+            except Exception:
+                caption_text = ""
+                tag_container = caption_el
+            try:
+                tag_els = tag_container.find_elements(By.XPATH, './/a[contains(@href, "/tag/")]')
+                for t in tag_els:
+                    txt = (t.text or "").strip()
+                    if txt.startswith("#"):
+                        hashtags.append(txt)
+                    else:
+                        href = t.get_attribute("href") or ""
+                        if "/tag/" in href:
+                            tag = urllib.parse.urlparse(href).path.split("/tag/")[1].strip("/")
+                            if tag: hashtags.append("#"+tag)
+            except Exception:
+                pass
+        like_txt = ""
+        comment_txt = ""
+        for by, sel in [
+            (By.CSS_SELECTOR, 'strong[data-e2e="like-count"]'),
+            (By.XPATH, '//strong[@data-e2e="like-count"]'),
+            (By.XPATH, '//*[@data-e2e="like-count"]'),
+            (By.CSS_SELECTOR, '[data-e2e="video-like-count"]'),
+            (By.CSS_SELECTOR, 'div[data-e2e="video-like-count"]'),
+            (By.CSS_SELECTOR, '[data-e2e*="photo"][data-e2e$="like-count"] strong'),
+        ]:
+            try:
+                el = WebDriverWait(driver, 2).until(EC.presence_of_element_located((by, sel)))
+                scroll_into_view(el); like_txt = (el.text or "").strip()
+                if like_txt: break
+            except TimeoutException:
+                pass
+        for by, sel in [
+            (By.CSS_SELECTOR, 'strong[data-e2e="comment-count"]'),
+            (By.XPATH, '//strong[@data-e2e="comment-count"]'),
+            (By.XPATH, '//*[@data-e2e="comment-count"]'),
+            (By.CSS_SELECTOR, '[data-e2e="video-comment-count"]'),
+            (By.CSS_SELECTOR, 'div[data-e2e="video-comment-count"]'),
+            (By.CSS_SELECTOR, '[data-e2e*="photo"][data-e2e$="comment-count"] strong'),
+        ]:
+            try:
+                el = WebDriverWait(driver, 2).until(EC.presence_of_element_located((by, sel)))
+                scroll_into_view(el); comment_txt = (el.text or "").strip()
+                if comment_txt: break
+            except TimeoutException:
+                pass
+        return {
+            "url": url,
+            "caption": caption_text,
+            "hashtags": list(dict.fromkeys(hashtags)),
+            "likes": parse_count(like_txt),
+            "comments": parse_count(comment_txt),
+            "raw_text": {"likes": like_txt or "", "comments": comment_txt or ""}
+        }
+    finally:
+        try:
+            driver.quit()
+        except Exception:
+            pass
+
+
+def scrape_profile_and_posts(username: str, *, headless: bool = False, max_posts: int | None = 12):
+    profile_url = f"https://www.tiktok.com/@{username}"
+
+    opts = _build_chrome_options(headless=headless)
     driver = webdriver.Chrome(options=opts, service=Service(ChromeDriverManager().install()))
     try:
         driver.set_page_load_timeout(25)
@@ -352,7 +481,10 @@ def scrape_profile_and_posts(username: str, *, headless: bool = False, max_posts
                 continue
 
         driver.get(profile_url)
-
+        driver.save_screenshot('cookies.png')
+        with open('cookies.html', 'w', encoding='utf-8') as f:
+                f.write(driver.page_source)
+        logging.critical("Saved debug screenshot and HTML. Check cookies.png!")
         for sel in [
             (By.CSS_SELECTOR, 'button[data-e2e="privacy-center-accept"]'),
             (By.XPATH, '//button[contains(., "Accept")]'),
@@ -362,7 +494,10 @@ def scrape_profile_and_posts(username: str, *, headless: bool = False, max_posts
                 break
             except Exception:
                 pass
-
+        driver.save_screenshot('profile.png')
+        with open('profile.html', 'w', encoding='utf-8') as f:
+                f.write(driver.page_source)
+        logging.critical("Saved debug screenshot and HTML. Check profile.png!")
         name = get_text(driver, [
             (By.CSS_SELECTOR, '[data-e2e="user-title"] h1'),
             (By.CSS_SELECTOR, 'h1[data-e2e="user-title"]'),
@@ -387,12 +522,31 @@ def scrape_profile_and_posts(username: str, *, headless: bool = False, max_posts
 
         links = scroll_grid_and_collect_links(driver, wait, limit=max_posts)
         posts = []
-        for i, link in enumerate(links, start=1):
-            try:
-                posts.append(scrape_video_page(driver, link, wait))
-            except Exception as e:
-                posts.append({"url": link, "error": str(e)})
-            time.sleep(0.2)
+
+        # Parallel scrape using separate lightweight drivers for each post
+        max_workers_env = 8
+        try:
+            workers = int(max_workers_env) if max_workers_env else 3
+        except Exception:
+            workers = 3
+        workers = max(1, min(8, workers))
+
+        if workers == 1:
+            for link in links:
+                try:
+                    posts.append(_scrape_post_standalone(link, headless=True))
+                except Exception as e:
+                    posts.append({"url": link, "error": str(e)})
+                time.sleep(0.1)
+        else:
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                futures = {pool.submit(_scrape_post_standalone, link, headless=True): link for link in links}
+                for fut in as_completed(futures):
+                    link = futures[fut]
+                    try:
+                        posts.append(fut.result())
+                    except Exception as e:
+                        posts.append({"url": link, "error": str(e)})
         print(f"Scraped {len(posts)} posts from @{username}")
         print("metrics:", {
             "following": parse_count(following_txt),
@@ -418,6 +572,5 @@ def scrape_profile_and_posts(username: str, *, headless: bool = False, max_posts
         driver.quit()
 
 if __name__ == "__main__":
-    data = scrape_profile_and_posts("thetransformix", headless=False, max_posts=100)    
+    data = scrape_profile_and_posts("thetransformix", headless=False, max_posts=100)
     from pprint import pprint
-    pprint(data)

@@ -8,7 +8,7 @@ from helpers import is_social_media_url, extract_domain, extract_username_from_u
 from tiktok_scraping import scrape_profile_and_posts as tiktok_scrape_profile
 import asyncio
 from instagram_analyzer import InstagramAnalyzer
-
+import logging
 class SocialAnalyzer:
     def __init__(self):
         self.timeout = aiohttp.ClientTimeout(total=30)
@@ -107,7 +107,9 @@ class SocialAnalyzer:
                 if not username:
                     raise Exception("Unable to extract TikTok username from URL")
                 loop = asyncio.get_running_loop()
-                data = await loop.run_in_executor(None, lambda: tiktok_scrape_profile(username, headless=False, max_posts=40))
+                logging.critical(f"Scraping TikTok profile: {username}")
+                data = await loop.run_in_executor(None, lambda: tiktok_scrape_profile(username, headless=True, max_posts=30))
+                logging.critical(f"TikTok profile scraped: {data}")
                 posts = data.get('posts', []) or []
                 like_values = [p.get('likes') for p in posts if isinstance(p.get('likes'), int)]
                 comment_values = [p.get('comments') for p in posts if isinstance(p.get('comments'), int)]

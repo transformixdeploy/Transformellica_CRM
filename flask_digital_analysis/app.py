@@ -191,7 +191,7 @@ def social_swot_analysis():
                 "analysisTitle": f"{platform} Analysis for  { profile.get("name", "") or profile.get("full_name", "")}",
                 "followers": profile.get("follower_count", 0) or 0,
                 "following": profile.get("following_count", 0) or 0,
-                "engagementRate": (content.get("engagement_rate", 0) or 0) * 100,
+                "engagementRate": (content.get("engagement_rate", 0) or 0),
                 "profileInfo": {
                     "basicInfo": {
                         "name": profile.get("name", "") or profile.get("full_name", ""),
@@ -531,7 +531,7 @@ def social_analysis_tiktok():
                 "analysisTitle": f"TikTok Analysis for  { profile.get("name", "") }",
                 "followers": profile.get("follower_count", 0) or 0,
                 "following": profile.get("following_count", 0) or 0,
-                "engagementRate": (content.get("engagement_rate", 0) or 0) * 100,
+                "engagementRate": (content.get("engagement_rate", 0) or 0),
                 "profileInfo": {
                     "basicInfo": {
                         "name": profile.get("name", ""),
