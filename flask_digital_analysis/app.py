@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify,Response
 from typing import Any, Dict
 import asyncio
 import base64
@@ -15,7 +15,7 @@ from branding_analyzer import BrandingAnalyzer
 from colorthief import ColorThief
 from dotenv import load_dotenv
 from flask_cors import CORS
-
+import json
 app = Flask(__name__)
 load_dotenv()
 CORS(app, resources={r"/*": {"origins": ["https://app.thetransformix.com"]}})
@@ -567,7 +567,128 @@ def social_analysis_tiktok():
     except Exception as e:
         return jsonify({"error": f"Failed to process request: {str(e)}"}), 500
 
+@app.post("/ai/test")
+def test_social_swot_analysis():
+    try:
+        body = request.get_json(force=True, silent=True) or {}
 
+        instagram_link = (body.get("instagram_link") or "").strip()
+        country = (body.get("country") or "").strip()
+        
+        if not instagram_link:
+            return jsonify({"error": "instagram_link is required"}), 400
+
+        if not is_valid_url(instagram_link):
+            instagram_link = validate_url(instagram_link)
+            if not is_valid_url(instagram_link):
+                return jsonify({"error": "Invalid instagram_link. Must include http(s) scheme and domain."}), 400
+        def stream_response():
+            payload = {
+                    "analysisTitle":"",
+                    "followers":  0,
+                    "following":  0,
+                    "engagementRate": 0,
+                    "profileInfo": {
+                        "basicInfo": {
+                            "name": "",
+                            "bio":  "",
+                            "verified":False,
+                            "private": False,
+                            "website": "",
+                        },
+                        "additionalMetrics": {
+                            "postsCount":0,
+                            "averageLikes": 0,
+                            "averageComments":0,
+                            "EngagementPerPost":0,
+                        },
+                    },
+                    "topHashTags": [],
+                    "fullSocialAnalysis": "",
+                }
+            analyzer = SocialAnalyzer()
+            gpt_service = GPTInsightsService()
+            async def run_social(url: str, user_country: str = ""):
+                social_result = await analyzer.analyze_social_url(url)
+                social_result['user_country'] = user_country
+                platform = social_result.get("platform", "Social")
+                profile = social_result.get("profile_data", {}) or {}
+                content = social_result.get("content_analysis", {}) or {}
+                detailed = social_result.get("detailed_data", {}) or {}
+                posts_count = (
+                    detailed.get("posts_count", 0)
+                    or detailed.get("content_analysis", {}).get("posts_count", 0)
+                    or content.get("post_count_scanned", 0)
+                    or 0
+                )
+                engagement = detailed.get("engagement", {}) or {}
+                avg_likes = engagement.get("avg_likes", 0) or content.get("avg_likes", 0) or 0
+                avg_comments = engagement.get("avg_comments", 0) or content.get("avg_comments", 0) or 0
+                engagement_per_post = engagement.get("engagement_per_post", 0) or 0
+                if not engagement_per_post and (avg_likes or avg_comments):
+                    engagement_per_post = float(avg_likes) + float(avg_comments)
+
+                top_hashtags_map = detailed.get("content_analysis", {}).get("top_hashtags", {}) or {}
+                if not top_hashtags_map:
+                    posts = detailed.get("posts") or detailed.get("content_analysis", {}).get("recent_posts") or []
+                    if isinstance(posts, list) and posts:
+                        freq = {}
+                        for p in posts:
+                            for tag in (p.get("hashtags") or []):
+                                if not isinstance(tag, str):
+                                    continue
+                                freq[tag] = freq.get(tag, 0) + 1
+                        top_hashtags_map = freq
+                    if not top_hashtags_map:
+                        tags_list = None
+                        if isinstance(content.get("top_hashtags"), list):
+                            tags_list = content.get("top_hashtags")
+                        elif isinstance(content.get("hashtags"), list):
+                            tags_list = content.get("hashtags")
+                        if tags_list:
+                            top_hashtags_map = {tag: 1 for tag in tags_list}
+                top_hashtags = [{"tag": tag, "frequency": freq} for tag, freq in top_hashtags_map.items()]
+                payload['analysisTitle']=f"{platform} Analysis for  { profile.get("name", "") or profile.get("full_name", "")}"
+                payload['followers']=profile.get("follower_count", 0) or 0
+                payload['following']=profile.get("following_count", 0) or 0
+                payload['engagementRate']=(content.get("engagement_rate", 0) or 0)
+                payload['profileInfo']['basicInfo']['name']=profile.get("name", "") or profile.get("full_name", "")
+                payload['profileInfo']['basicInfo']['bio']=profile.get("bio", "") or ""
+                payload['profileInfo']['basicInfo']['verified']=bool(profile.get("verification_status", False))
+                payload['profileInfo']['basicInfo']['private']=bool(profile.get("is_private", False))
+                payload['profileInfo']['basicInfo']['website']=profile.get("external_url", "") or ""
+                payload['profileInfo']['additionalMetrics']['postsCount']=posts_count or 0
+                payload['profileInfo']['additionalMetrics']['averageLikes']=float(avg_likes or 0)
+                payload['profileInfo']['additionalMetrics']['averageComments']=float(avg_comments or 0) or 0
+                payload['profileInfo']['additionalMetrics']['EngagementPerPost']=float(engagement_per_post or 0)
+                payload['topHashTags']=top_hashtags
+                yield "data: "+json.dumps(payload)+'\n\n'
+                gpt_result = await gpt_service.generate_social_insights(social_result)
+                insights = (gpt_result or {}).get("insights", {})
+                payload['fullSocialAnalysis']=insights.get("full_analysis", "")
+                yield "data: "+json.dumps(payload)+'\n\n'
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                async def run_and_yield():
+                    async for chunk in run_social(instagram_link, country):
+                        yield chunk
+
+                # Run the async generator manually and yield results
+                agen = run_and_yield()
+
+                while True:
+                    try:
+                        chunk = loop.run_until_complete(agen.__anext__())
+                        yield chunk
+                    except StopAsyncIteration:
+                        break
+            finally:
+                loop.close()
+
+        return Response(stream_response(), mimetype="text/event-stream")
+
+    except Exception as e:
+        return jsonify({"error": f"Failed to process request: {str(e)}"}), 500
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=os.getenv("PORT"), debug=True, use_reloader=False)
-

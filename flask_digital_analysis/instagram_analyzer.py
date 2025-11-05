@@ -21,11 +21,11 @@ class InstagramAnalyzer:
         try:
             session_cookies = {}
             env_cookies = {
-                "csrftoken": os.getenv("INSTAGRAM_CSRFTOKEN"),
-                "sessionid": os.getenv("INSTAGRAM_SESSIONID"),
-                "ds_user_id": os.getenv("INSTAGRAM_DS_USER_ID"),
-                "mid": os.getenv("INSTAGRAM_MID"),
-                "ig_did": os.getenv("INSTAGRAM_IG_DID")
+                "csrftoken": os.getenv("SESSION_COOKIES_CSRF_TOKEN"),
+                "sessionid": os.getenv("SESSION_COOKIES_SESSION_ID"),
+                "ds_user_id": os.getenv("SESSION_COOKIES_DS_USER_ID"),
+                "mid": os.getenv("SESSION_COOKIES_M_ID"),
+                "ig_did": os.getenv("SESSION_COOKIES_IG_DID")
             }
             
             if all(env_cookies.values()):
