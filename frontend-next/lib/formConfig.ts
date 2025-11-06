@@ -41,7 +41,7 @@ export const services: Service[] = [
   { id: 'branding_audit', name: 'Branding Audit', icon: Palette, description: "Evaluate brand identity, consistency, and positioning.", iconClassName: "w-6 h-6 mb-1 text-primary" },
   { id: 'instagram_analysis', name: 'Instagram performance analytics', icon: Instagram, description: "Analyze Instagram strengths, weaknesses, opportunities, threats.", iconClassName: "w-6 h-6 mb-1 text-primary" },
   { id: 'tiktok_analysis', name: 'TikTok performance analytics', icon: Video, description: "Analyze TikTok strengths, weaknesses, opportunities, threats.", iconClassName: "w-6 h-6 mb-1 text-primary" },
-  { id: 'all_social_analysis', name: 'All in one', icon: Zap, description: "Comprehensive social media analysis for optimized strategy and maximum impact.", iconClassName: "w-6 h-6 mb-1 text-primary"},
+  // { id: 'all_social_analysis', name: 'All in one', icon: Zap, description: "Comprehensive social media analysis for optimized strategy and maximum impact.", iconClassName: "w-6 h-6 mb-1 text-primary"},
 ];
 
 // Social Analysis questions

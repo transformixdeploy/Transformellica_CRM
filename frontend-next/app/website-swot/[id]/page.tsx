@@ -4,14 +4,14 @@ import React, { useContext, useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import ReactMarkdown from 'react-markdown';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {userDataCategories, websiteSWOTData} from "@/lib/constants";
 import { ReanalyzeButton } from '@/components/ReanalyzeButton';
 import CircularProgress  from '@/components/CicrularProgress';
 import { AuthContext } from '@/context/AuthContext';
 import { authenticatePageUseEffect } from '@/utilities/authenticatePageUseEffect';
 import CheckingUserCard from '@/components/CheckingUserCard';
-import { checkServiceLimitReached, deleteUserData, getUserData, getDataHistory } from '@/utilities/axiosRequester';
+import { checkServiceLimitReached, deleteUserData, getUserData, getDataHistory, storeWebsiteAnalysisData } from '@/utilities/axiosRequester';
 import { AlertCircle } from 'lucide-react';
 import UserDataHistory from '@/components/UserDataHistory';
 
@@ -32,19 +32,100 @@ const WebsiteSWOT = ({params} : Props) => {
     const {user, isAuthenticated, isLoading, accessToken} = useContext(AuthContext);
 
     useEffect(()=>{
+    
+        if(!accessToken) return;
+        const searchParams = useSearchParams();
       
-      const getData = async ()=>{
-        if(accessToken){
-          const currentWebsiteData = await getUserData(params.id); 
-          setData(currentWebsiteData.data);
-
-          const userHistory = await getDataHistory(userDataCategories.WEBSITE_SWOT);
-          setDataHistory(userHistory.data.userHistoryDataObjects);
-        }
-      }
-
-      getData();
-
+        const getData = async ()=>{
+            
+            // Get user social analysis history
+            const userHistory = await getDataHistory(userDataCategories.WEBSITE_SWOT);
+            setDataHistory(userHistory.data.userHistoryDataObjects);
+  
+            // get user data using UUID
+            const currentWebsiteData = await getUserData(params.id); 
+            
+            // if user data exists
+            if(currentWebsiteData.data){
+              setData(currentWebsiteData.data);
+              return;
+            }
+  
+            // Let's check for all query params
+  
+            // params
+            const business_description = searchParams.get('business_description');
+            const company_name = searchParams.get('company_name');
+            const country = searchParams.get('country');
+            const goal = searchParams.get('goal');
+            const serviceId = searchParams.get('serviceId');
+            const website_url = searchParams.get('website_url');
+  
+            if( !business_description || !company_name || !country || !goal || !serviceId || !website_url ){
+              return router.push("/");
+            }
+  
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/social/website-swot`, {
+              method: "POST",
+              headers: { 
+                "Content-Type": "application/json", 
+                "authorization": `Bearer ${accessToken}` 
+              },
+              body: JSON.stringify({
+                business_description,
+                company_name,
+                country,
+                goal,
+                website_url,
+              })
+            });
+        
+            const reader = response!.body?.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let buffer = "";
+  
+            var finalData;
+        
+            while (true) {
+              const { value, done } = await reader!.read();
+              if (done) break;
+        
+              buffer += decoder.decode(value, { stream: true });
+        
+              // Split on double newlines (end of SSE message)
+              const parts = buffer.split("\n\n");
+        
+              // Keep incomplete chunk in buffer
+              buffer = parts.pop()!;
+        
+              for (const part of parts) {
+                if (part.startsWith("data:")) {
+                  const jsonText = part.replace(/^data:\s*/, "");
+                  try {
+                    const json = JSON.parse(jsonText);
+                    console.log("Received SSE chunk:", json);
+                    finalData = json;
+                    setData(json);
+                  } catch (err) {
+                    console.error("Invalid JSON chunk:", jsonText);
+                  }
+                }
+              }
+            }
+        
+            console.log("Stream ended");
+  
+            await storeWebsiteAnalysisData({
+              dataId: params.id, 
+              country, 
+              website_url, 
+              data: finalData, 
+              userEmail: user?.email
+            });  
+          }
+        
+        getData();
+  
     }, [accessToken]);
 
     authenticatePageUseEffect(isAuthenticated, isLoading, router);

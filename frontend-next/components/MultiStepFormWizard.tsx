@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation';
 import { checkServiceLimitReached, createBrandAuditData, createSentimentAnalysisData, createInstagramAnalysisData, createWebsiteSWOTData, createTikTokAnalysisData } from '@/utilities/axiosRequester';
 import { AuthContext } from '@/context/AuthContext';
 import { userDataCategories } from '@/lib/constants';
+import { v4 as uuidv4 } from 'uuid';
 
 const slideVariants: Variants = {
   enter: (direction: number) => ({ x: direction > 0 ? '100%' : '-100%', opacity: 0 }),
@@ -166,10 +167,13 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
         goal: submissionData.goal,
         instagram_link: submissionData.instagram_link
       }
-     
-      const createdDataId = (await createInstagramAnalysisData(form)).data.id;
-      router.push(`/social-swot/${createdDataId}`);
-   
+
+      // Create UUID
+      const uuid = uuidv4();
+
+      // Navigate to '/social-swot/UUID' with the "form" object + "social_analysis_type" as query params
+      router.push(`/social-swot/${uuid}/?business_description=${form.business_description}&company_name=${form.company_name}&country=${form.country}&goal=${form.goal}&instagram_link=${form.instagram_link}&serviceId=instagram_analysis`);
+    
     }else if(submissionData.service_id === "tiktok_analysis"){
       setSocialAnalysing(true);
      
@@ -181,8 +185,11 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
         tiktok_link: submissionData.tiktok_link
       }
      
-      const createdDataId = (await createTikTokAnalysisData(form)).data.id;
-      router.push(`/social-swot/${createdDataId}`);
+      // Create UUID
+      const uuid = uuidv4();
+
+      // Navigate to '/social-swot/UUID' with the "form" object + "social_analysis_type" as query params
+      router.push(`/social-swot/${uuid}/?business_description=${form.business_description}&company_name=${form.company_name}&country=${form.country}&goal=${form.goal}&tiktok_link=${form.tiktok_link}&serviceId=tiktok_analysis`);
    
     }else if(submissionData.service_id === "website_audit_swot"){
      
@@ -195,8 +202,12 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
         website_url: submissionData.website_url
       }
      
-      const createdDataId = (await createWebsiteSWOTData(form)).data.id;
-      router.push(`/website-swot/${createdDataId}`);
+      // Create UUID
+      const uuid = uuidv4();
+
+      // Navigate to '/social-swot/UUID' with the "form" object + "social_analysis_type" as query params
+      router.push(`/website-swot/${uuid}/?business_description=${form.business_description}&company_name=${form.company_name}&country=${form.country}&goal=${form.goal}&website_url=${form.website_url}&serviceId=website_audit_swot`);
+    
     }else if(submissionData.service_id === "customer_sentiment"){
       setSentimentAnalysing(true);
      
@@ -207,8 +218,13 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
         country: submissionData.country,
         industry_field: submissionData.industry,
       }
-      const createdDataId = (await createSentimentAnalysisData(form)).data.id;
-      router.push(`/customer-sentiment/${createdDataId}`);
+
+      // Create UUID
+      const uuid = uuidv4();
+
+      // Navigate to '/social-swot/UUID' with the "form" object + "social_analysis_type" as query params
+      router.push(`/customer-sentiment/${uuid}/?business_description=${form.business_description}&company_name=${form.company_name}&country=${form.country}&goal=${form.goal}&industry_field=${form.industry_field}&serviceId=customer_sentiment`);
+
     }else if(submissionData.service_id === "branding_audit"){
       setBrandingAnalysing(true);
      
@@ -221,38 +237,43 @@ const MultiStepFormWizard: React.FC<MultiStepFormWizardProps> = ({ onClose, setW
       form.append("instagram_link", submissionData.instagram_link || "");
       form.append("logoUpload", submissionData.raw_form_data.logoUpload || new File([], ""));
      
-     
-      const createdDataId = (await createBrandAuditData(form)).data.id;
-      router.push(`/branding-audit/${createdDataId}`);
+      // Create UUID
+      const uuid = uuidv4();
+
+      // Save FormData to sessionStorage
+      sessionStorage.setItem(`form_${uuid}`, JSON.stringify(Object.fromEntries(form)));
+
+      // Navigate to '/social-swot/UUID' with the "form" object + "social_analysis_type" as query params
+      router.push(`/branding-audit/${uuid}/?serviceId=branding_audit`);
     }else if(submissionData.service_id === "all_social_analysis"){
 
-      setSocialAnalysing(true);
+      // setSocialAnalysing(true);
      
-      const tiktokForm = {
-        business_description: submissionData.business_description,
-        company_name: submissionData.company_name,
-        country: submissionData.country,
-        goal: submissionData.goal,
-        tiktok_link: submissionData.tiktok_link
-      }
+      // const tiktokForm = {
+      //   business_description: submissionData.business_description,
+      //   company_name: submissionData.company_name,
+      //   country: submissionData.country,
+      //   goal: submissionData.goal,
+      //   tiktok_link: submissionData.tiktok_link
+      // }
 
-      const instagramForm = {
-        business_description: submissionData.business_description,
-        company_name: submissionData.company_name,
-        country: submissionData.country,
-        goal: submissionData.goal,
-        instagram_link: submissionData.instagram_link
-      }
+      // const instagramForm = {
+      //   business_description: submissionData.business_description,
+      //   company_name: submissionData.company_name,
+      //   country: submissionData.country,
+      //   goal: submissionData.goal,
+      //   instagram_link: submissionData.instagram_link
+      // }
 
-      const [tiktokResponse, instagramResponse] = await Promise.all([
-        createTikTokAnalysisData(tiktokForm),
-        createInstagramAnalysisData(instagramForm)
-      ]);
+      // const [tiktokResponse, instagramResponse] = await Promise.all([
+      //   createTikTokAnalysisData(tiktokForm),
+      //   createInstagramAnalysisData(instagramForm)
+      // ]);
 
-      const createdTiktokAnalysisId = tiktokResponse.data.id;
-      const createdInstagramAnalysisId = instagramResponse.data.id;
+      // const createdTiktokAnalysisId = tiktokResponse.data.id;
+      // const createdInstagramAnalysisId = instagramResponse.data.id;
 
-      router.push(`/social-swot`);
+      // router.push(`/social-swot`);
     }
    
     try {

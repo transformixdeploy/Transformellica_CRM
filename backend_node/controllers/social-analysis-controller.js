@@ -22,51 +22,38 @@ const createWebsiteSWOT = asyncWrapper(
         console.log("Website SWOT: User is verified");
 
         const {business_description, company_name, country, goal, website_url} = req.body;
-        const brandName = website_url.match(/^(?:https?:\/\/)?(?:www\.)?(?:[\w-]+\.)*([\w-]+)\.\w+(?:\/|$)/i)[1];
 
-        console.log("Website url: ", website_url);
-        console.log("Brand name: ", brandName);
-      
-        if(process.env.AI_SERVICE_TRANSFORMELLICA_URL){
-
-            console.log("Website SWOT: Sending request to AI Service");
-
-            const response = await axios.post(`${process.env.AI_SERVICE_TRANSFORMELLICA_URL}/website-swot-analysis`, {
-                business_description,
-                company_name,
-                country,
-                goal,
-                website_url
-            });
-
-            console.log("Website SWOT: Response received from AI Service");
+        if(!process.env.AI_SERVICE_TRANSFORMELLICA_URL){
+            // // save data to UserData
+            // const createdUserData = await UserData.create({
+            //     title: `${country} - ${brandName} - {${new Date().toLocaleString()}}`,
+            //     data: testData.socialSWOTTestData,
+            //     category: categories.SOCIAL_SWOT,
+            //     userId: user.id
+            // });
             
-
-            console.log("Website SWOT: Saving data to UserData");
-            // save data to UserData
-            const createdUserData = await UserData.create({
-                title: `${brandName} - {${new Date().toLocaleString()}}`,
-                data: response.data,
-                category: categories.WEBSITE_SWOT,
-                userId: user.id,
-            });
-            console.log("Website SWOT: Data saved to UserData");
-            
-            console.log("Website SWOT: Sending response to client");
-            return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
+            // return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
+            return;
         }
 
-        // save data to UserData
-        const createdUserData = await UserData.create({
-            title: `${brandName} - {${new Date().toLocaleString()}}`,
-            data: testData.websiteSWOTTestData,
-            category: categories.WEBSITE_SWOT,
-            userId: user.id
-        });
-        console.log("Website SWOT: Data saved to UserData");
+        // Set SSE headers for streaming chunks
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders(); // Important for Node.js to start sending
 
-        console.log("Website SWOT: Sending response to client");
-        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
+        //social-swot-analysis
+        const response = await axios.post(`${process.env.AI_SERVICE_TRANSFORMELLICA_URL}/website-swot-analysis`, {
+            business_description,
+            company_name,
+            country,
+            goal,
+            website_url
+        }, {
+            responseType: "stream"
+        });
+        
+        response.data.pipe(res);
     }
 );
 
@@ -81,49 +68,40 @@ const createSentimentAnalysis = asyncWrapper(
             return JSendResponser(res, HttpStatusCode.BAD_REQUEST, HttpStatusMessage.FAIL, {message: "Limit Reached for this service"});
         }
 
-        console.log("Sentiment Analysis: User is verified");
-
         
         const {company_name, business_description, goal, country, industry_field} = req.body;
-        
-        if(process.env.AI_SERVICE_TRANSFORMELLICA_URL){
-            console.log("Sentiment Analysis: Sending request to AI Service");
 
-            const response = await axios.post(`${process.env.AI_SERVICE_TRANSFORMELLICA_URL}/customer-sentiment-analysis`, {
-              business_description,
-              company_name,
-              country,
-              goal,
-              industry_field
-            });
-            console.log("Sentiment Analysis: Response received from AI Service");
-
-            console.log("Sentiment Analysis: Saving data to UserData");
-            // save data to UserData
-            const createdUserData = await UserData.create({
-                title: `${country} / ${industry_field} - {${new Date().toLocaleString()}}`,
-                data: response.data,
-                category: categories.SENTIMENT,
-                userId: user.id
-            });
-            console.log("Sentiment Analysis: Data saved to UserData");
-
-            console.log("Sentiment Analysis: Sending response to client");
-            return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
+        if(!process.env.AI_SERVICE_TRANSFORMELLICA_URL){
+            // // save data to UserData
+            // const createdUserData = await UserData.create({
+            //     title: `${country} - ${brandName} - {${new Date().toLocaleString()}}`,
+            //     data: testData.socialSWOTTestData,
+            //     category: categories.SOCIAL_SWOT,
+            //     userId: user.id
+            // });
+            
+            // return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
+            return;
         }
-        
 
-        // save data to UserData
-        const createdUserData = await UserData.create({
-            title: `${country} / ${industry_field} - {${new Date().toLocaleString()}} `,
-            data: testData.sentimentTestData,
-            category: categories.SENTIMENT,
-            userId: user.id
+        // Set SSE headers for streaming chunks
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders(); // Important for Node.js to start sending
+
+        //social-swot-analysis
+        const response = await axios.post(`${process.env.AI_SERVICE_TRANSFORMELLICA_URL}/customer-sentiment-analysis`, {
+            business_description,
+            company_name,
+            country,
+            goal,
+            industry_field
+        }, {
+            responseType: "stream"
         });
-        console.log("Sentiment Analysis: Data saved to UserData");
-
-        console.log("Sentiment Analysis: Sending response to client");
-        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
+        
+        response.data.pipe(res);
     }
 );
 
@@ -138,41 +116,39 @@ const createInstagramAnalysis = asyncWrapper(
             return JSendResponser(res, HttpStatusCode.BAD_REQUEST, HttpStatusMessage.FAIL, {message: "Limit Reached for this service"});
         }
 
-        const {business_description, company_name, country, goal, instagram_link} = req.body;  
-        const brandName = instagram_link.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^/?#]+)(?:[/?#]|$)/i)[1];
-
-        console.log("Instgram Link: ", instagram_link);
-        console.log("Brand name: ", brandName);
+        const {business_description, company_name, country, goal, instagram_link} = req.body;
       
-        if(process.env.AI_SERVICE_TRANSFORMELLICA_URL){
-            const response = await axios.post(`${process.env.AI_SERVICE_TRANSFORMELLICA_URL}/social-swot-analysis`, {
-              business_description,
-              company_name,
-              country,
-              goal,
-              instagram_link
-            });
-
-            // save data to UserData
-            const createdUserData = await UserData.create({
-                title: `${country} - ${brandName} - {${new Date().toLocaleString()}}`,
-                data: response.data,
-                category: categories.SOCIAL_SWOT,
-                userId: user.id
-            });
-          
-            return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
+        if(!process.env.AI_SERVICE_TRANSFORMELLICA_URL){
+            // // save data to UserData
+            // const createdUserData = await UserData.create({
+            //     title: `${country} - ${brandName} - {${new Date().toLocaleString()}}`,
+            //     data: testData.socialSWOTTestData,
+            //     category: categories.SOCIAL_SWOT,
+            //     userId: user.id
+            // });
+            
+            // return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
+            return;
         }
 
-        // save data to UserData
-        const createdUserData = await UserData.create({
-            title: `${country} - ${brandName} - {${new Date().toLocaleString()}}`,
-            data: testData.socialSWOTTestData,
-            category: categories.SOCIAL_SWOT,
-            userId: user.id
+        // Set SSE headers for streaming chunks
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders(); // Important for Node.js to start sending
+
+        //social-swot-analysis
+        const response = await axios.post(`${process.env.AI_SERVICE_TRANSFORMELLICA_URL}/social-swot-analysis`, {
+          business_description,
+          company_name,
+          country,
+          goal,
+          instagram_link
+        }, {
+            responseType: "stream"
         });
         
-        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
+        response.data.pipe(res);
     }
 );
 
@@ -188,40 +164,39 @@ const createTikTokAnalysis = asyncWrapper(
         }
 
         const {business_description, company_name, country, goal, tiktok_link} = req.body;  
-        const brandName = tiktok_link.match(/(?:https?:\/\/)?(?:www\.)?tiktok\.com\/@([^/?#]+)/i)[1];
-
-        console.log("tiktok Link: ", tiktok_link);
-        console.log("Brand name: ", brandName);
-      
-        if(process.env.AI_SERVICE_TRANSFORMELLICA_URL){
-            const response = await axios.post(`${process.env.AI_SERVICE_TRANSFORMELLICA_URL}/social-analysis-tiktok`, {
-              business_description,
-              company_name,
-              country,
-              goal,
-              tiktok_link
-            });
-
-            // save data to UserData
-            const createdUserData = await UserData.create({
-                title: `${country} - ${brandName} - {${new Date().toLocaleString()}}`,
-                data: response.data,
-                category: categories.SOCIAL_SWOT,
-                userId: user.id
-            });
-          
-            return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
+        
+        if(!process.env.AI_SERVICE_TRANSFORMELLICA_URL){
+            // // save data to UserData
+            // const createdUserData = await UserData.create({
+            //     title: `${country} - ${brandName} - {${new Date().toLocaleString()}}`,
+            //     data: testData.socialSWOTTestData,
+            //     category: categories.SOCIAL_SWOT,
+            //     userId: user.id
+            // });
+            
+            // return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
+            return;
         }
 
-        // save data to UserData
-        const createdUserData = await UserData.create({
-            title: `${country} - ${brandName} - {${new Date().toLocaleString()}}`,
-            data: testData.socialSWOTTestData,
-            category: categories.SOCIAL_SWOT,
-            userId: user.id
+        // Set SSE headers for streaming chunks
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders(); // Important for Node.js to start sending
+
+        //social-swot-analysis
+        const response = await axios.post(`${process.env.AI_SERVICE_TRANSFORMELLICA_URL}/social-analysis-tiktok`, {
+            business_description,
+            company_name,
+            country,
+            goal,
+            tiktok_link
+        }, {
+            responseType: "stream"
         });
         
-        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
+        response.data.pipe(res);
+
     }
 );
 
@@ -243,41 +218,162 @@ const createBrandingAudit = asyncWrapper(
             type: logoUpload.mimetype,
         })
         
-        if(process.env.AI_SERVICE_TRANSFORMELLICA_URL){
-            const formData = new FormData();
-            formData.append("logoUpload" , file);
-            formData.append("business_description" , business_description);
-            formData.append("company_name" , company_name);
-            formData.append("country" , country);
-            formData.append("goal" , goal);
-            formData.append("website_url" , website_url);
-            formData.append("instagram_link" , instagram_link);
+        const formData = new FormData();
+        formData.append("logoUpload" , file);
+        formData.append("business_description" , business_description);
+        formData.append("company_name" , company_name);
+        formData.append("country" , country);
+        formData.append("goal" , goal);
+        formData.append("website_url" , website_url);
+        formData.append("instagram_link" , instagram_link);
+
+        if(!process.env.AI_SERVICE_TRANSFORMELLICA_URL){
+            // // save data to UserData
+            // const createdUserData = await UserData.create({
+            //     title: `${country} - ${brandName} - {${new Date().toLocaleString()}}`,
+            //     data: testData.socialSWOTTestData,
+            //     category: categories.SOCIAL_SWOT,
+            //     userId: user.id
+            // });
             
-            const response = await axios.post(`${process.env.AI_SERVICE_TRANSFORMELLICA_URL}/branding-audit`, formData);
-
-
-            // save data to UserData
-            const createdUserData = await UserData.create({
-                title: `${country} / ${logoUpload.originalname} - {${new Date().toLocaleString()}}`,
-                data: response.data,
-                category: categories.BRAND_AUDIT,
-                userId: user.id
-            });
-
-            return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
+            // return JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id});
+            return;
         }
 
-        // save data to UserData
-        const createdUserData = await UserData.create({
-            title: `${country} / ${logoUpload.originalname} - {${new Date().toLocaleString()}}`,
-            data: testData.brandAuditTestData,
-            category: categories.BRAND_AUDIT,
-            userId: user.id
+        // Set SSE headers for streaming chunks
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders(); // Important for Node.js to start sending
+
+        //social-swot-analysis
+        const response = await axios.post(`${process.env.AI_SERVICE_TRANSFORMELLICA_URL}/branding-audit`, formData , {
+            responseType: "stream"
         });
         
-        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, {id:createdUserData.dataValues.id}); 
+        response.data.pipe(res);
     }
 );
+
+const storeInstagramAnalysis = asyncWrapper(
+    async (req,res,next)=>{
+
+        const {country, instagram_link, dataId, data, userEmail} = req.body;  
+        const brandName = instagram_link.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^/?#]+)(?:[/?#]|$)/i)[1];
+
+        console.log("Instgram Link: ", instagram_link);
+        console.log("Brand name: ", brandName);
+
+        const user = await User.findOne({where: {email: userEmail}});
+        
+        await UserData.create({
+            id: dataId,
+            title: `${country} - ${brandName} - ${new Date().toLocaleString()}`,
+            data: data,
+            category: categories.SOCIAL_SWOT,
+            userId: user.dataValues.id
+        });
+
+        console.log("Data stored successfully.");
+
+        JSendResponser(res, HttpStatusCode.CREATED, HttpStatusMessage.SUCCESS, {message: "Created"});
+    }
+);
+
+const storeTiktokAnalysis = asyncWrapper(
+    async (req,res,next)=>{
+
+        const {country, tiktok_link, dataId, data, userEmail} = req.body;  
+        const brandName = tiktok_link.match(/(?:https?:\/\/)?(?:www\.)?tiktok\.com\/@([^/?#]+)/i)[1];
+
+        console.log("Tiktok Link: ", tiktok_link);
+        console.log("Brand name: ", brandName);
+
+        const user = await User.findOne({where: {email: userEmail}});
+        
+        await UserData.create({
+            id: dataId,
+            title: `${country} - ${brandName} - ${new Date().toLocaleString()}`,
+            data: data,
+            category: categories.SOCIAL_SWOT,
+            userId: user.dataValues.id
+        });
+
+        console.log("Data stored successfully.");
+
+        JSendResponser(res, HttpStatusCode.CREATED, HttpStatusMessage.SUCCESS, {message: "Created"});
+    }
+);
+
+const storeWebsiteAnalysis = asyncWrapper(
+    async (req,res,next)=>{
+
+        const {country, website_url, dataId, data, userEmail} = req.body;  
+        
+        const brandName = website_url.match(/^(?:https?:\/\/)?(?:www\.)?(?:[\w-]+\.)*([\w-]+)\.\w+(?:\/|$)/i)[1];
+
+        console.log("Website Link: ", website_url);
+        console.log("Brand name: ", brandName);
+
+        const user = await User.findOne({where: {email: userEmail}});
+        
+        await UserData.create({
+            id: dataId,
+            title: `${country} - ${brandName} - ${new Date().toLocaleString()}`,
+            data: data,
+            category: categories.WEBSITE_SWOT,
+            userId: user.dataValues.id
+        });
+
+        console.log("Data stored successfully.");
+
+        JSendResponser(res, HttpStatusCode.CREATED, HttpStatusMessage.SUCCESS, {message: "Created"});
+    }
+);
+
+const storeSentimentAnalysis = asyncWrapper(
+    async (req,res,next)=>{
+
+        const {country, industry_field, dataId, data, userEmail} = req.body;  
+
+        const user = await User.findOne({where: {email: userEmail}});
+        
+        await UserData.create({
+            id: dataId,
+            title: `${country} - ${industry_field} - ${new Date().toLocaleString()}`,
+            data: data,
+            category: categories.SENTIMENT,
+            userId: user.dataValues.id
+        });
+
+        console.log("Data stored successfully.");
+
+        JSendResponser(res, HttpStatusCode.CREATED, HttpStatusMessage.SUCCESS, {message: "Created"});
+    }
+);
+
+const storeBrandAuditAnalysis = asyncWrapper(
+    async (req,res,next)=>{
+
+        const {country, dataId, data, userEmail, logoUploadOriginalName} = req.body;
+
+        const user = await User.findOne({where: {email: userEmail}});
+        
+        await UserData.create({
+            id: dataId,
+            title: `${country} - ${logoUploadOriginalName} - ${new Date().toLocaleString()}`,
+            data: data,
+            category: categories.BRAND_AUDIT,
+            userId: user.dataValues.id
+        });
+
+        console.log("Data stored successfully.");
+
+        JSendResponser(res, HttpStatusCode.CREATED, HttpStatusMessage.SUCCESS, {message: "Created"});
+    }
+);
+
+
 
 const serviceLimitReached = asyncWrapper(
     async (req,res,next)=>{
@@ -305,7 +401,7 @@ const serviceLimitReachedHelperFunction = async (userRole, userId, category)=>{
     }else{
         return false; 
     }
-}
+};
 
 const getUserHistoryObjects = asyncWrapper(
     async(req,res,next)=>{
@@ -353,7 +449,7 @@ const getUserData = asyncWrapper(
                 id: userDataId
             }
         })
-        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, data.dataValues.data);
+        JSendResponser(res, HttpStatusCode.OK, HttpStatusMessage.SUCCESS, data ? data.dataValues.data : null);
     }
 );
 
@@ -370,13 +466,19 @@ const deleteUserData = asyncWrapper(
 );
 
 export default {
-    createWebsiteSWOT,
     getUserData,
     deleteUserData,
     getUserHistoryObjects,
+    serviceLimitReached,
+    createBrandingAudit,
+    createWebsiteSWOT,
     createSentimentAnalysis,
     createTikTokAnalysis,
     createInstagramAnalysis,
-    createBrandingAudit,
-    serviceLimitReached
+    storeInstagramAnalysis,
+    storeTiktokAnalysis,
+    storeWebsiteAnalysis,
+    storeSentimentAnalysis,
+    storeBrandAuditAnalysis
+    
 }

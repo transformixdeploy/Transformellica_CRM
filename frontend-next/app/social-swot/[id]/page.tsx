@@ -11,8 +11,9 @@ import { AlertCircle, HeartPlus, MessageSquareMore, ThumbsUp } from 'lucide-reac
 import { authenticatePageUseEffect } from '@/utilities/authenticatePageUseEffect';
 import { AuthContext } from '@/context/AuthContext';
 import CheckingUserCard from '@/components/CheckingUserCard';
-import { checkServiceLimitReached, getDataHistory, getUserData } from '@/utilities/axiosRequester';
+import { checkServiceLimitReached, createInstagramAnalysisData, createTikTokAnalysisData, getDataHistory, getUserData, storeInstagramAnalysisData, storeTiktokAnalysisData } from '@/utilities/axiosRequester';
 import UserDataHistory from '@/components/UserDataHistory';
+import { useSearchParams } from 'next/navigation';
 
 // Custom Tooltip Component
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -36,7 +37,9 @@ interface Props {
 }
 
 const SocialSWOT = ({params} : Props) => {
+  
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [data, setData] = useState(socialSWOTData);
   const [dataHistory, setDataHistory] = useState([{title: "", id: "", categoryUrl: ""}]);
@@ -46,16 +49,127 @@ const SocialSWOT = ({params} : Props) => {
 
   useEffect(()=>{
     
+      if(!accessToken) return;
+    
       const getData = async ()=>{
-          if(accessToken){
-              const currentWebsiteData = await getUserData(params.id); 
-              setData(currentWebsiteData.data);
+          
+          // Get user social analysis history
+          const userHistory = await getDataHistory(userDataCategories.SOCIAL_SWOT);
+          setDataHistory(userHistory.data.userHistoryDataObjects);
 
-              const userHistory = await getDataHistory(userDataCategories.SOCIAL_SWOT);
-              setDataHistory(userHistory.data.userHistoryDataObjects);
+          // get user data using UUID
+          const currentSocialData = await getUserData(params.id); 
+          
+          // if user data exists
+          if(currentSocialData.data){
+            setData(currentSocialData.data);
+            return;
           }
-      }
 
+          // Let's check for all query params
+
+          // params
+          const business_description = searchParams.get('business_description');
+          const company_name = searchParams.get('company_name');
+          const country = searchParams.get('country');
+          const goal = searchParams.get('goal');
+          const serviceId = searchParams.get('serviceId');
+          const instagram_link = searchParams.get('instagram_link');
+          const tiktok_link = searchParams.get('tiktok_link');
+
+          if( !business_description || !company_name || !country || !goal || !serviceId || ( !instagram_link && !tiktok_link ) ){
+            return router.push("/");
+          }
+
+          var response;
+
+          if(serviceId === "tiktok_analysis"){
+            response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/social/tiktok-analysis`, {
+              method: "POST",
+              headers: { 
+                "Content-Type": "application/json", 
+                "authorization": `Bearer ${accessToken}` 
+              },
+              body: JSON.stringify({
+                business_description,
+                company_name,
+                country,
+                goal,
+                tiktok_link,
+              })
+            });
+          }else if(serviceId === "instagram_analysis"){
+            response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/social/instagram-analysis`, {
+              method: "POST",
+              headers: { 
+                "Content-Type": "application/json", 
+                "authorization": `Bearer ${accessToken}` 
+              },
+              body: JSON.stringify({
+                business_description,
+                company_name,
+                country,
+                goal,
+                instagram_link,
+              })
+            });
+          }
+      
+          const reader = response!.body?.getReader();
+          const decoder = new TextDecoder("utf-8");
+          let buffer = "";
+
+          var finalData;
+      
+          while (true) {
+            const { value, done } = await reader!.read();
+            if (done) break;
+      
+            buffer += decoder.decode(value, { stream: true });
+      
+            // Split on double newlines (end of SSE message)
+            const parts = buffer.split("\n\n");
+      
+            // Keep incomplete chunk in buffer
+            buffer = parts.pop()!;
+      
+            for (const part of parts) {
+              if (part.startsWith("data:")) {
+                const jsonText = part.replace(/^data:\s*/, "");
+                try {
+                  const json = JSON.parse(jsonText);
+                  console.log("Received SSE chunk:", json);
+                  finalData = json;
+                  setData(json);
+                } catch (err) {
+                  console.error("Invalid JSON chunk:", jsonText);
+                }
+              }
+            }
+          }
+      
+          console.log("Stream ended");
+
+          if(serviceId === "tiktok_analysis"){
+            await storeTiktokAnalysisData({
+              dataId: params.id, 
+              country, 
+              tiktok_link, 
+              data: finalData, 
+              userEmail: user?.email
+            });
+          }else if(serviceId === "instagram_analysis"){
+            await storeInstagramAnalysisData({
+              dataId: params.id, 
+              country, 
+              instagram_link, 
+              data: finalData, 
+              userEmail: user?.email
+            });
+          }
+          
+        }
+      
       getData();
 
   }, [accessToken]);

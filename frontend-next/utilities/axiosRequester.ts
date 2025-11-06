@@ -81,8 +81,28 @@ async function createWebsiteSWOTData(form: {}) : Promise<{status: string, data: 
     return responseFormat(await apiClient.post(`/social/website-swot`, form));
 }
 
-async function createInstagramAnalysisData(form: {}) : Promise<{status: string, data: {id:string}}>{
-    return responseFormat(await apiClient.post(`/social/instagram-analysis`, form));
+async function createInstagramAnalysisData(form: {}){
+    return responseFormat(await apiClient.post(`/social/instagram-analysis`, form, {responseType: "stream"}));
+}
+
+async function storeInstagramAnalysisData(form: {}){
+    return responseFormat(await apiClient.post(`/social/store/instagram-analysis`, form));
+}
+
+async function storeTiktokAnalysisData(form: {}){
+    return responseFormat(await apiClient.post(`/social/store/tiktok-analysis`, form));
+}
+
+async function storeSentimentAnalysisData(form: {}){
+    return responseFormat(await apiClient.post(`/social/store/sentiment-analysis`, form));
+}
+
+async function storeWebsiteAnalysisData(form: {}){
+    return responseFormat(await apiClient.post(`/social/store/website-swot`, form));
+}
+
+async function storeBrandingAuditAnalysisData(form: {}){
+    return responseFormat(await apiClient.post(`/social/store/branding-audit`, form));
 }
 
 async function createTikTokAnalysisData(form: {}) : Promise<{status: string, data: {id:string}}>{
@@ -138,5 +158,10 @@ export {
     refresh,
     logout,
     register,
-    checkServiceLimitReached
+    checkServiceLimitReached,
+    storeInstagramAnalysisData,
+    storeTiktokAnalysisData,
+    storeSentimentAnalysisData,
+    storeWebsiteAnalysisData,
+    storeBrandingAuditAnalysisData
 }
