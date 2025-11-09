@@ -175,26 +175,55 @@ class TokenMonitor:
         try:
             client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
             
-            # Prepare messages for Anthropic
+            # Prepare messages for Anthropic with cache control support
             anthropic_messages = []
             system_message = None
+            system_cache_control = None
             
             for msg in messages:
                 if msg["role"] == "system":
                     system_message = msg["content"]
+                    # Extract cache_control if present
+                    if "cache_control" in msg:
+                        system_cache_control = msg["cache_control"]
                 else:
-                    anthropic_messages.append({
+                    # Build message with cache_control if present
+                    message_dict = {
                         "role": msg["role"],
                         "content": msg["content"]
-                    })
+                    }
+                    # Add cache_control if present in the message (for user/assistant messages)
+                    if "cache_control" in msg:
+                        message_dict["cache_control"] = msg["cache_control"]
+                    anthropic_messages.append(message_dict)
+            
+            # Prepare API call parameters
+            api_params = {
+                "model": model,
+                "max_tokens": max_tokens,
+                "messages": anthropic_messages
+            }
+            
+            # Add system message with cache control support
+            # Anthropic API: cache_control for system messages is passed within the system parameter structure
+            if system_message:
+                if system_cache_control:
+                    # For system messages with cache_control, pass as a list with cache_control
+                    # Format: system can be a list of content blocks with cache_control
+                    api_params["system"] = [
+                        {
+                            "type": "text",
+                            "text": system_message,
+                            "cache_control": system_cache_control
+                        }
+                    ]
+                else:
+                    api_params["system"] = system_message
             
             # Make the API call
             response = await asyncio.to_thread(
                 client.messages.create,
-                model=model,
-                max_tokens=max_tokens,
-                system=system_message,
-                messages=anthropic_messages
+                **api_params
             )
             
             duration_ms = (time.time() - start_time) * 1000

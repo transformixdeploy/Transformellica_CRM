@@ -42,12 +42,18 @@ class GPTInsightsService:
         if not self.api_key:
             return self._generate_mock_seo_insights(seo_data)
         
-        # Prepare prompt for GPT
-        prompt = self._create_seo_analysis_prompt(seo_data)
+        # Prepare prompt with caching optimization
+        static_template, variable_data = self._create_seo_analysis_prompt(seo_data, return_split=True)
         
         try:
-            # Call Anthropic API with token tracking
-            response = await self._call_ai_api(prompt, max_tokens=5000, operation="seo_analysis")
+            # Call Anthropic API with split prompt for optimal caching
+            response = await self._call_ai_api(
+                prompt="",  # Not used when static_template and variable_data are provided
+                max_tokens=5000, 
+                operation="seo_analysis",
+                static_template=static_template,
+                variable_data=variable_data
+            )
             
             # Parse and structure the response
             insights = self._parse_seo_insights(response)
@@ -79,10 +85,18 @@ class GPTInsightsService:
         if not self.api_key:
             return self._generate_mock_social_insights(social_data)
         
-        prompt = self._create_social_analysis_prompt(social_data)
+        # Prepare prompt with caching optimization
+        static_template, variable_data = self._create_social_analysis_prompt(social_data, return_split=True)
         
         try:
-            response = await self._call_ai_api(prompt, max_tokens=5000, operation="social_analysis")
+            # Call Anthropic API with split prompt for optimal caching
+            response = await self._call_ai_api(
+                prompt="",  # Not used when static_template and variable_data are provided
+                max_tokens=5000, 
+                operation="social_analysis",
+                static_template=static_template,
+                variable_data=variable_data
+            )
             
             return {
                 "url": social_data.get("url"),
@@ -146,12 +160,24 @@ class GPTInsightsService:
             "ai_analysis": 3500
         }
         return token_map.get(operation, 1500)  
-    async def _call_ai_api(self, prompt: str, max_tokens: int = 3500, operation: str = "ai_analysis", cache_system_prompt: bool = True) -> str:
+    async def _call_ai_api(self, prompt: str, max_tokens: int = 3500, operation: str = "ai_analysis", 
+                          cache_system_prompt: bool = True, static_template: Optional[str] = None, 
+                          variable_data: Optional[str] = None) -> str:
         """
         Call Anthropic Claude API with prompt caching enabled
         
-        Prompt caching can reduce costs by 90% for cached input tokens and 10% for cached output tokens.
-        Best for: repeated analysis patterns, system prompts, large reference data
+        Prompt caching can reduce costs by up to 90% for cached input tokens and 10% for cached output tokens.
+        
+        How it works:
+        - Static prompt templates (instructions, format requirements) are cached and reused
+        - Only variable data (actual SEO data, social media data, etc.) is sent each time
+        - Cached portions don't count toward input token costs after the first call
+        
+        Args:
+            prompt: Full prompt (used if static_template/variable_data not provided)
+            static_template: Static prompt template to cache (instructions, format, etc.)
+            variable_data: Variable data that changes per request (actual data to analyze)
+            cache_system_prompt: Whether to cache the system message
         """
         try:
             # Standard system message that can be cached
@@ -172,7 +198,7 @@ class GPTInsightsService:
                 messages.append({
                     "role": "system", 
                     "content": system_message,
-                    "cache_control": {"type": "ephemeral"}  # Cache this system prompt
+                    "cache_control": {"type": "ephemeral"}  # Cache this system prompt (lasts ~24 hours)
                 })
             else:
                 messages.append({
@@ -180,10 +206,27 @@ class GPTInsightsService:
                     "content": system_message
                 })
             
-            # Add user prompt
+            # Optimize prompt caching by splitting static template from variable data
+            if static_template and variable_data:
+                # Split approach: cache the static template, send variable data separately
+                # This maximizes caching benefits
+                messages.append({
+                    "role": "user",
+                    "content": static_template,
+                    "cache_control": {"type": "ephemeral"}  # Cache the static template
+                })
+                # Variable data is not cached (changes each request)
+                messages.append({
+                    "role": "user",
+                    "content": variable_data
+                    # No cache_control - this data changes per request
+                })
+            else:
+                # Fallback: use full prompt (less optimal for caching but works)
             messages.append({
                 "role": "user", 
                 "content": prompt
+                    # No cache_control - full prompt includes variable data
             })
             
             # Get optimal token allocation
@@ -215,8 +258,19 @@ class GPTInsightsService:
             print(f"Anthropic API error: {str(e)}")
             raise Exception(f"Anthropic API error: {str(e)}")
     
-    def _create_seo_analysis_prompt(self, seo_data: Dict[str, Any]) -> str:
-        """Create prompt for SEO analysis"""
+    def _split_prompt_for_caching(self, full_prompt: str, data_placeholder: str = "{{DATA}}") -> tuple[str, str]:
+        """
+        Helper method to split a prompt into static template (cacheable) and variable data.
+        
+        Returns:
+            tuple: (static_template, variable_data) where static_template can be cached
+        """
+        # For now, return the full prompt as variable data
+        # In future, prompts can be refactored to use placeholders
+        return ("", full_prompt)
+    
+    def _create_seo_analysis_prompt(self, seo_data: Dict[str, Any], return_split: bool = False) -> str | tuple[str, str]:
+        """Create prompt for SEO analysis with optional splitting for caching"""
         
         # Extract page speed scores
         page_speed_scores = seo_data.get('page_speed_scores', {})
@@ -225,27 +279,10 @@ class GPTInsightsService:
         best_practices = page_speed_scores.get('best_practices', 'N/A')
         seo_score = page_speed_scores.get('seo', 'N/A')
         overall = page_speed_scores.get('overall', 'N/A')
-        return f"""
-        You are Transformellica's Senior SEO and Technical Marketing Consultant. You specialize in on-page and technical SEO, performance optimization, and localized content strategy for SMEs and agencies in MENA. Your purpose is to deliver precise, data-driven, and prioritized insights that content and technical teams can act on immediately.
-        You will analyze the following SEO data:
+        
+        # Static template (instructions, format) - this can be cached
+        static_template = """You are Transformellica's Senior SEO and Technical Marketing Consultant. You specialize in on-page and technical SEO, performance optimization, and localized content strategy for SMEs and agencies in MENA. Your purpose is to deliver precise, data-driven, and prioritized insights that content and technical teams can act on immediately.
 
-        Website: {seo_data.get('url')}
-        HTTPS: {seo_data.get('https')}
-        Title: {seo_data.get('title')}
-        Meta Description: {seo_data.get('meta_description')}
-        H1 Tags: {seo_data.get('headings', {}).get('h1', [])}
-        H2 Tags: {seo_data.get('headings', {}).get('h2', [])}
-        Missing Alt Tags: {seo_data.get('alt_tags_missing')}
-
-        Page Speed Metrics:
-        - Performance: {performance}
-        - Accessibility: {accessibility}
-        - Best Practices: {best_practices}
-        - SEO: {seo_score}
-        - Overall: {overall}
-
-        Social Links: {seo_data.get('social_links', [])}
-        Open Graph Tags: {seo_data.get('og_tags', {})}
         Your task is to produce a structured, insight-based SEO report following the exact format specified below. Act as a senior consultant from a professional SEO agency - analyze like an auditor, explain like a strategist, and communicate in clear, direct business language.
 
         ## Analysis Framework
@@ -323,29 +360,341 @@ class GPTInsightsService:
 
         *Poor:* "Optimize images for faster loading"
 
-        Focus on delivering actionable insights that small to mid-sized website operators can implement without dedicated SEO engineers. Every recommendation should be testable and verifiable
+        Focus on delivering actionable insights that small to mid-sized website operators can implement without dedicated SEO engineers. Every recommendation should be testable and verifiable.
+
+        Now analyze the following SEO data:"""
+        
+        # Variable data (changes per request) - this should NOT be cached
+        variable_data = f"""
+        Website: {seo_data.get('url')}
+        HTTPS: {seo_data.get('https')}
+        Title: {seo_data.get('title')}
+        Meta Description: {seo_data.get('meta_description')}
+        H1 Tags: {seo_data.get('headings', {}).get('h1', [])}
+        H2 Tags: {seo_data.get('headings', {}).get('h2', [])}
+        Missing Alt Tags: {seo_data.get('alt_tags_missing')}
+
+        Page Speed Metrics:
+        - Performance: {performance}
+        - Accessibility: {accessibility}
+        - Best Practices: {best_practices}
+        - SEO: {seo_score}
+        - Overall: {overall}
+
+        Social Links: {seo_data.get('social_links', [])}
+        Open Graph Tags: {seo_data.get('og_tags', {})}
         """
+        
+        if return_split:
+            return (static_template, variable_data)
+        
+        return f"""{static_template}
+
+        {variable_data}"""
     
-    def _create_social_analysis_prompt(self, social_data: Dict[str, Any]) -> str:
-        """Create prompt for social media analysis"""
+    def _create_social_analysis_prompt(self, social_data: Dict[str, Any], return_split: bool = False) -> str | tuple[str, str]:
+        """Create platform-specific prompt for social media analysis with optional splitting for caching"""
         
         profile_data = social_data.get('profile_data', {})
-        platform = social_data.get('platform', 'unknown')
+        platform = social_data.get('platform', 'unknown').strip()
+        content_analysis = social_data.get('content_analysis', {})
+        detailed_data = social_data.get('detailed_data', {})
+        user_country = social_data.get('user_country', '')
         
-        return f"""
-        You are Transformellica's Senior Social Media and Digital Marketing AI Consultant. You specialize in multi-platform analytics, content optimization, and audience behavior across MENA markets. Your purpose is to deliver accurate, data-driven, and platform-specific insights that help brands grow measurable engagement and awareness. You act as a strategic advisor focused on ROI and execution-ready recommendations.
-        You will receive social media profile data to analyze:
-        Platform: {platform}
-        Profile URL: {social_data.get('url')}
-        Name: {profile_data.get('name')}
-        Bio: {profile_data.get('bio')}
-        Followers: {profile_data.get('follower_count')}
-        Following: {profile_data.get('following_count')}
-        Verified: {profile_data.get('verification_status')}
-        Recent Content Themes: {social_data.get('content_analysis', {}).get('content_themes', [])}
-        Hashtags Used: {social_data.get('content_analysis', {}).get('hashtags', [])}
+        # Extract profile information
+        profile_name = profile_data.get('name') or profile_data.get('full_name', '')
+        bio = profile_data.get('bio') or profile_data.get('biography', '')
+        followers = profile_data.get('follower_count') or profile_data.get('followers', 0)
+        following = profile_data.get('following_count') or profile_data.get('following', 0)
+        verified = profile_data.get('verification_status') or profile_data.get('is_verified', False)
+        is_private = profile_data.get('is_private', False)
+        website = profile_data.get('external_url') or profile_data.get('website', '')
+        
+        # Extract engagement data
+        engagement_rate = content_analysis.get('engagement_rate', 0) or 0
+        hashtags = content_analysis.get('hashtags', []) or []
+        content_themes = content_analysis.get('content_themes', []) or []
+        
+        # Extract detailed metrics if available
+        posts_count = (
+            detailed_data.get('posts_count', 0) or 
+            detailed_data.get('content_analysis', {}).get('posts_count', 0) or
+            profile_data.get('posts_count', 0) or 0
+        )
+        engagement_metrics = detailed_data.get('engagement', {}) or {}
+        avg_likes = engagement_metrics.get('avg_likes', 0) or content_analysis.get('avg_likes', 0) or 0
+        avg_comments = engagement_metrics.get('avg_comments', 0) or content_analysis.get('avg_comments', 0) or 0
+        
+        # Use platform-specific prompts
+        if platform.lower() == 'tiktok':
+            return self._create_tiktok_prompt(
+                profile_name=profile_name,
+                bio=bio,
+                followers=followers,
+                following=following,
+                verified=verified,
+                is_private=is_private,
+                website=website,
+                engagement_rate=engagement_rate,
+                hashtags=hashtags,
+                content_themes=content_themes,
+                posts_count=posts_count,
+                avg_likes=avg_likes,
+                avg_comments=avg_comments,
+                url=social_data.get('url', ''),
+                user_country=user_country,
+                return_split=return_split
+            )
+        elif platform.lower() == 'instagram':
+            return self._create_instagram_prompt(
+                profile_name=profile_name,
+                bio=bio,
+                followers=followers,
+                following=following,
+                verified=verified,
+                is_private=is_private,
+                website=website,
+                engagement_rate=engagement_rate,
+                hashtags=hashtags,
+                content_themes=content_themes,
+                posts_count=posts_count,
+                avg_likes=avg_likes,
+                avg_comments=avg_comments,
+                url=social_data.get('url', ''),
+                user_country=user_country,
+                return_split=return_split
+            )
+        else:
+            # Generic fallback for other platforms
+            return self._create_generic_social_prompt(
+                platform=platform,
+                profile_name=profile_name,
+                bio=bio,
+                followers=followers,
+                following=following,
+                verified=verified,
+                engagement_rate=engagement_rate,
+                hashtags=hashtags,
+                content_themes=content_themes,
+                url=social_data.get('url', ''),
+                user_country=user_country,
+                return_split=return_split
+            )
+    
+    def _create_tiktok_prompt(self, profile_name: str, bio: str, followers: int, following: int, 
+                             verified: bool, is_private: bool, website: str, engagement_rate: float,
+                             hashtags: list, content_themes: list, posts_count: int, avg_likes: float,
+                             avg_comments: float, url: str, user_country: str, return_split: bool = False) -> str | tuple[str, str]:
+        """Create TikTok 2025-specific analysis prompt with optional splitting for caching"""
+        
+        # Static template (instructions, format) - this can be cached
+        static_template = """You are Transformellica's Senior TikTok Growth & Content Strategy AI Consultant (2025). You specialize in TikTok's recommendation algorithm, short-form storytelling, and community engagement across MENA markets. Your mission is to deliver precise, data-backed insights that help brands grow followers, engagement, and conversion through TikTok-native strategies.
 
-        Your task is to analyze this profile data and provide a complete, insight-based marketing report that includes:
+        ⸻
+
+        Task
+
+        You will receive TikTok profile data to analyze. Analyze this data and produce a complete TikTok marketing intelligence report including:
+        1. Profile Optimization Score (1–100) – based on username clarity, bio keywords, content consistency, and audience retention.
+        2. Content Strategy Recommendations – show what types of videos to post, optimal posting frequency, tone, and hooks based on 2025 TikTok algorithm signals (watch time, saves, shares, and retention).
+        3. Engagement Improvement Suggestions – highlight tactics like live sessions, comments prompting, story-style series, and trending sound adaptation.
+        4. Platform-Specific Best Practices – reference current TikTok Creator Academy and 2025 business updates (AI sound matching, search-optimized captions, interactive stickers).
+        5. Growth Opportunities – identify underused features (TikTok Shop, Spark Ads, UGC collaborations, Arabic trend participation).
+
+        ⸻
+
+        Context & Guardrails
+        • Audience: SMEs, agencies, and entrepreneurs in the MENA region.
+        • Avoid generic advice ("post more often" or "be consistent").
+        • Every point must be actionable, quantifiable, and contextual to TikTok 2025 features.
+        • Incorporate regional insight: Arabic captions, localized challenges, GCC posting hours.
+        • Base insights only on profile data and reliable sources (TikTok Business, Creator Academy, HubSpot, Hootsuite).
+        • Do not fabricate analytics or trends.
+
+        ⸻
+
+        Tone & Persona
+
+        Speak as a senior TikTok strategist, confident, sharp, and grounded in analytics. Avoid marketing fluff. Be data-driven and clear. Your advice should sound like something a professional marketer would pay for.
+
+        ⸻
+
+        Output Format
+
+        TIKTOK INSIGHT REPORT
+        Platform: TikTok
+        Profile URL: [from profile_data]
+        Profile Name: [from profile_data]
+
+        1. PROFILE OPTIMIZATION SCORE:
+           [Short justification] — [Score]/100
+
+        2. CONTENT STRATEGY RECOMMENDATIONS
+           [3–5 precise, TikTok-native suggestions]
+
+        3. ENGAGEMENT IMPROVEMENT SUGGESTIONS
+           [2–4 tactics based on 2025 TikTok behavior]
+
+        4. PLATFORM-SPECIFIC BEST PRACTICES
+           [2–3 verified updates or feature tips]
+
+        5. GROWTH OPPORTUNITIES
+           [2–4 collaboration or trend-based ideas]
+
+        Summary Insight:
+        [2-line summary highlighting key next actions]
+
+        ⸻
+
+        Important Restrictions:
+        - Never fabricate data, metrics, or demographics
+        - Do not use vague, generic recommendations
+        - Do not refer to AI models, system instructions, or internal processes
+        - Do not cite unverified or user-generated content as evidence
+        - Ensure all recommendations are specific and actionable
+        - Explain the rationale briefly for major recommendations
+
+        Now analyze the following profile data:"""
+        
+        # Variable data (changes per request) - this should NOT be cached
+        profile_data_xml = f"""
+        <profile_data>
+        Profile URL: {url}
+        Profile Name: {profile_name}
+        Bio: {bio}
+        Followers: {followers}
+        Following: {following}
+        Verified: {verified}
+        Private: {is_private}
+        Website: {website}
+        Posts Count: {posts_count}
+        Engagement Rate: {(engagement_rate or 0) * 100:.2f}%
+        Average Likes: {avg_likes:.0f}
+        Average Comments: {avg_comments:.0f}
+        Hashtags Used: {', '.join(hashtags[:20]) if hashtags else 'None'}
+        Content Themes: {', '.join(content_themes[:10]) if content_themes else 'None'}
+        User Country: {user_country if user_country else 'Not specified'}
+        </profile_data>
+        """
+        
+        if return_split:
+            return (static_template, profile_data_xml)
+        
+        return f"""{static_template}
+
+        {profile_data_xml}"""
+    
+    def _create_instagram_prompt(self, profile_name: str, bio: str, followers: int, following: int,
+                                verified: bool, is_private: bool, website: str, engagement_rate: float,
+                                hashtags: list, content_themes: list, posts_count: int, avg_likes: float,
+                                avg_comments: float, url: str, user_country: str, return_split: bool = False) -> str | tuple[str, str]:
+        """Create Instagram 2025-specific analysis prompt with optional splitting for caching"""
+        
+        # Static template (instructions, format) - this can be cached
+        static_template = """You are Transformellica's Senior Instagram Growth & Content Strategy AI Consultant (2025). You specialize in Instagram's evolving algorithm (Reels-first discovery, interest-based feeds, and DMs conversion flows) across MENA. Your role is to deliver sharp, data-informed insights that drive engagement, reach, and conversion for brands.
+
+        ⸻
+
+        Task
+
+        You will receive Instagram profile data to analyze. Analyze this profile and deliver an Instagram Marketing Intelligence Report that includes:
+        1. Profile Optimization Score (1–100) – evaluate bio clarity, visual cohesion, content balance, and follower interaction health.
+        2. Content Strategy Recommendations – suggest specific content formats (Reels, carousels, Stories, Guides) aligned with the 2025 Instagram algorithm and audience type.
+        3. Engagement Improvement Suggestions – outline tactics for boosting saves, shares, and comment depth (e.g., polls, DMs triggers, collaborations).
+        4. Platform-Specific Best Practices – reference updates like Reels Remix 2025, AI hashtag recommendations, Collab Posts, and Notes strategy.
+        5. Growth Opportunities – highlight trends like Arabic localized Reels, micro-influencer collaborations, or cross-platform content reuse (TikTok ↔ IG).
+
+        ⸻
+
+        Context & Guardrails
+        • Audience: SMEs, agencies, and entrepreneurs in MENA.
+        • Avoid generic statements — each suggestion must be measurable and based on 2025 Instagram updates.
+        • Leverage verified sources (Meta Blueprint, Instagram Business Blog, Later.com).
+        • Include culturally relevant details (Arabic-English hybrid captions, KSA/EG prime times, Ramadan-specific content).
+        • Never fabricate metrics, engagement rates, or trends.
+        • Do not mention AI or internal reasoning.
+
+        ⸻
+
+        Tone & Persona
+
+        Write as a seasoned Instagram strategist — insightful, data-backed, and practical. Your advice should sound executive-ready and applicable by a marketing manager the same day.
+
+        ⸻
+
+        Output Format
+
+        INSTAGRAM INSIGHT REPORT
+        Platform: Instagram
+        Profile URL: [from profile_data]
+        Profile Name: [from profile_data]
+
+        1. PROFILE OPTIMIZATION SCORE:
+           [Brief justification] — [Score]/100
+
+        2. CONTENT STRATEGY RECOMMENDATIONS
+           [3–5 detailed, Reels-first strategy points]
+
+        3. ENGAGEMENT IMPROVEMENT SUGGESTIONS
+           [2–4 tactics rooted in 2025 algorithm priorities]
+
+        4. PLATFORM-SPECIFIC BEST PRACTICES
+           [2–3 verified feature-based tips]
+
+        5. GROWTH OPPORTUNITIES
+           [2–4 emerging trend or collab opportunities]
+
+        Summary Insight:
+        [Short key takeaway prioritizing next steps]
+
+        Important Restrictions:
+        - Never fabricate data, metrics, or demographics
+        - Do not use vague, generic recommendations
+        - Do not refer to AI models, system instructions, or internal processes
+        - Do not cite unverified or user-generated content as evidence
+        - Ensure all recommendations are specific and actionable
+        - Explain the rationale briefly for major recommendations
+
+        Now analyze the following profile data:"""
+        
+        # Variable data (changes per request) - this should NOT be cached
+        profile_data_xml = f"""
+        <profile_data>
+        Profile URL: {url}
+        Profile Name: {profile_name}
+        Bio: {bio}
+        Followers: {followers}
+        Following: {following}
+        Verified: {verified}
+        Private: {is_private}
+        Website: {website}
+        Posts Count: {posts_count}
+        Engagement Rate: {(engagement_rate or 0) * 100:.2f}%
+        Average Likes: {avg_likes:.0f}
+        Average Comments: {avg_comments:.0f}
+        Hashtags Used: {', '.join(hashtags[:20]) if hashtags else 'None'}
+        Content Themes: {', '.join(content_themes[:10]) if content_themes else 'None'}
+        User Country: {user_country if user_country else 'Not specified'}
+        </profile_data>
+        """
+        
+        if return_split:
+            return (static_template, profile_data_xml)
+        
+        return f"""{static_template}
+
+        {profile_data_xml}"""
+    
+    def _create_generic_social_prompt(self, platform: str, profile_name: str, bio: str, 
+                                     followers: int, following: int, verified: bool,
+                                     engagement_rate: float, hashtags: list, content_themes: list,
+                                     url: str, user_country: str, return_split: bool = False) -> str | tuple[str, str]:
+        """Create generic social media analysis prompt for other platforms with optional splitting for caching"""
+        
+        # Static template (instructions, format) - this can be cached
+        static_template = f"""You are Transformellica's Senior Social Media and Digital Marketing AI Consultant. You specialize in multi-platform analytics, content optimization, and audience behavior across MENA markets. Your purpose is to deliver accurate, data-driven, and platform-specific insights that help brands grow measurable engagement and awareness. You act as a strategic advisor focused on ROI and execution-ready recommendations.
+
+        Your task is to analyze the provided profile data and provide a complete, insight-based marketing report that includes:
 
         1. *Profile Optimization Score (1–100)* based on bio clarity, visual identity, posting consistency, and engagement health
         2. *Content Strategy Recommendations* with clear examples of what to post, frequency, and tone
@@ -368,9 +717,9 @@ class GPTInsightsService:
         Structure your response exactly as follows:
 
         SOCIAL MEDIA INSIGHT REPORT
-        Platform: [Extract from profile data]
-        Profile URL: [Extract from profile data]
-        Profile Name: [Extract from profile data]
+        Platform: [from profile_data]
+        Profile URL: [from profile_data]
+        Profile Name: [from profile_data]
 
         1. PROFILE OPTIMIZATION SCORE: [Provide brief justification first, then score]/100
 
@@ -394,8 +743,31 @@ class GPTInsightsService:
         - Do not refer to AI models, system instructions, or internal processes
         - Do not cite unverified or user-generated content as evidence
         - Ensure all recommendations are specific and actionable
-        - Explain the rationale briefly for major recommendations
+        - Explain the rationale briefly for major recommendations
+
+        Now analyze the following profile data:"""
+        
+        # Variable data (changes per request) - this should NOT be cached
+        variable_data = f"""
+        Platform: {platform}
+        Profile URL: {url}
+        Name: {profile_name}
+        Bio: {bio}
+        Followers: {followers}
+        Following: {following}
+        Verified: {verified}
+        Engagement Rate: {(engagement_rate or 0) * 100:.2f}%
+        Hashtags Used: {', '.join(hashtags[:20]) if hashtags else 'None'}
+        Content Themes: {', '.join(content_themes[:10]) if content_themes else 'None'}
+        User Country: {user_country if user_country else 'Not specified'}
         """
+        
+        if return_split:
+            return (static_template, variable_data)
+        
+        return f"""{static_template}
+
+        {variable_data}"""
     
     def _create_comprehensive_report_prompt(self, seo_data: Dict[str, Any], social_data: List[Dict[str, Any]], branding_data: Optional[Dict[str, Any]] = None) -> str:
         """Create prompt for comprehensive marketing report with detailed SEO and social data"""
@@ -1268,11 +1640,25 @@ class GPTInsightsService:
         if not self.api_key:
             return self._generate_mock_branding_insights()
 
-        prompt = self._create_branding_analysis_prompt(branding_profile)
+        # Prepare prompt with caching optimization
+        static_template, variable_data = self._create_branding_analysis_prompt(branding_profile, return_split=True)
         
         try:
-            # Prepare content with text prompt and images for Claude
-            content = [{"type": "text", "text": prompt}]
+            # Prepare content with split prompts and images for Claude
+            # Static template (cached) comes first, then variable data, then images
+            content = [
+                {
+                    "type": "text", 
+                    "text": static_template,
+                    "cache_control": {"type": "ephemeral"}  # Cache the static template
+                }
+            ]
+            
+            # Add variable data if present (not cached)
+            if variable_data:
+                content.append({"type": "text", "text": variable_data})
+            
+            # Add images (not cached)
             for item in screenshots:
                 image_format = item.get("format", "png")
                 media_type = f"image/{image_format}"
@@ -1285,14 +1671,27 @@ class GPTInsightsService:
                     }
                 })
 
-            # Route through token monitor so MLflow logs under branding_analysis
+            # Route through token monitor with cache control for static template
+            # Note: For multi-part content, we cache the first text block (static_template)
+            messages = [
+                {
+                    "role": "system", 
+                    "content": "You are an expert in branding and visual design. Analyze the provided screenshots and provide comprehensive brand audit insights.",
+                    "cache_control": {"type": "ephemeral"}
+                },
+                {
+                    "role": "user",
+                    "content": content
+                }
+            ]
+            
+            # For the first text block in content, we need to mark it for caching
+            # Since content is a list, we'll handle caching at the message level
+            # The static template is the first text block, so it will be cached
             tm_result = await token_monitor.track_anthropic_call(
                 operation="branding_analysis",
                 model=self.model_name,
-                messages=[
-                    {"role": "system", "content": "You are an expert in branding and visual design. Analyze the provided screenshots and provide comprehensive brand audit insights."},
-                    {"role": "user", "content": content}
-                ],
+                messages=messages,
                 max_tokens=5000,
                 experiment_name="branding_analysis"
             )
@@ -1304,18 +1703,13 @@ class GPTInsightsService:
             print(f"Anthropic API error during branding analysis: {str(e)}")
             return self._generate_mock_branding_insights()
 
-    def _create_branding_analysis_prompt(self, branding_profile: Optional[Dict[str, Any]] = None) -> str:
-        """Creates a prompt for the branding analysis LLM using the new structured format."""
+    def _create_branding_analysis_prompt(self, branding_profile: Optional[Dict[str, Any]] = None, return_split: bool = False) -> str | tuple[str, str]:
+        """Creates a prompt for the branding analysis LLM using the new structured format with optional splitting for caching."""
         
-        base_prompt = """You are Transformellica's Senior Brand Identity and Visual Design Consultant. You specialize in evaluating digital brand presence across websites and social media using evidence-based design, UX, and marketing principles. Your goal is to deliver clear, actionable, and data-informed brand audit insights that help businesses improve consistency, clarity, and trust.
+        # Static template (instructions, format) - this can be cached
+        static_template = """You are Transformellica's Senior Brand Identity and Visual Design Consultant. You specialize in evaluating digital brand presence across websites and social media using evidence-based design, UX, and marketing principles. Your goal is to deliver clear, actionable, and data-informed brand audit insights that help businesses improve consistency, clarity, and trust.
 
-    You will be analyzing brand data to produce a structured brand audit in JSON format. Here is the brand data you need to analyze:
-
-    <brand_data>
-    {BRAND_DATA_PLACEHOLDER}
-    </brand_data>
-
-    Your task is to analyze the provided screenshots, visual captures, and associated data from the company's online presence. Base your analysis strictly on the visual evidence and text provided in the brand data.
+    You will be analyzing brand data to produce a structured brand audit in JSON format. Your task is to analyze the provided screenshots, visual captures, and associated data from the company's online presence. Base your analysis strictly on the visual evidence and text provided in the brand data.
 
     You must produce a JSON audit with the following exact structure and sections:
 
@@ -1376,28 +1770,31 @@ class GPTInsightsService:
 
     ## Output Format
 
-    Return your response as a valid JSON object only. Do not include any commentary, explanations, or text outside the JSON structure. The JSON must match the exact structure specified above."""
+    Return your response as a valid JSON object only. Do not include any commentary, explanations, or text outside the JSON structure. The JSON must match the exact structure specified above.
 
-        # Add branding profile context if available
+    Now analyze the provided screenshots and branding profile data:"""
+        
+        # Variable data (changes per request) - this should NOT be cached
+        variable_data = ""
         if branding_profile:
-            profile_context = "\n\n## OFFICIAL BRANDING PROFILE FOR COMPARISON\n\n"
-            profile_context += "The company has provided their official branding profile. Compare the analyzed screenshots against these official brand standards:\n\n"
+            variable_data = "\n\n## OFFICIAL BRANDING PROFILE FOR COMPARISON\n\n"
+            variable_data += "The company has provided their official branding profile. Compare the analyzed screenshots against these official brand standards:\n\n"
             
             if branding_profile.get('logo'):
                 logo_info = branding_profile['logo']
-                profile_context += f"**Official Logo:**\n"
-                profile_context += f"- Filename: {logo_info.get('filename', 'Uploaded logo')}\n"
-                profile_context += f"- Size: {logo_info.get('size', 'Unknown size')}\n\n"
+                variable_data += f"**Official Logo:**\n"
+                variable_data += f"- Filename: {logo_info.get('filename', 'Uploaded logo')}\n"
+                variable_data += f"- Size: {logo_info.get('size', 'Unknown size')}\n\n"
             
             if branding_profile.get('colors'):
                 colors = branding_profile['colors']
-                profile_context += f"**Official Brand Colors:**\n"
-                profile_context += f"- Dominant Color: {colors.get('dominant', 'Not specified')}\n"
+                variable_data += f"**Official Brand Colors:**\n"
+                variable_data += f"- Dominant Color: {colors.get('dominant', 'Not specified')}\n"
                 if colors.get('palette'):
-                    profile_context += f"- Color Palette: {', '.join(colors.get('palette', []))}\n"
-                profile_context += "\n"
+                    variable_data += f"- Color Palette: {', '.join(colors.get('palette', []))}\n"
+                variable_data += "\n"
             
-            profile_context += """**Comparison Requirements:**
+            variable_data += """**Comparison Requirements:**
 
     When conducting your analysis, you MUST:
     1. Verify if the website/social media uses the official brand colors consistently
@@ -1408,10 +1805,11 @@ class GPTInsightsService:
     6. Provide actionable steps to better align the digital presence with the official brand standards
 
     Base all color palette analysis on comparison with the official colors listed above. If colors in the screenshots deviate from the official palette, this should be explicitly noted in the "room_for_improvement" section and addressed in the color_palette recommendations."""
-            
-            return base_prompt + profile_context
         
-        return base_prompt
+        if return_split:
+            return (static_template, variable_data)
+        
+        return static_template + variable_data
 
     def _generate_mock_branding_insights(self) -> Dict[str, Any]:
         """
@@ -1503,10 +1901,18 @@ class GPTInsightsService:
         if not self.api_key:
             return self._generate_mock_sentiment_insights(sentiment_data)
         
-        prompt = self._create_sentiment_analysis_prompt(sentiment_data)
+        # Prepare prompt with caching optimization
+        static_template, variable_data = self._create_sentiment_analysis_prompt(sentiment_data, return_split=True)
         
         try:
-            response = await self._call_ai_api(prompt, max_tokens=5000)
+            # Call Anthropic API with split prompt for optimal caching
+            response = await self._call_ai_api(
+                prompt="",  # Not used when static_template and variable_data are provided
+                max_tokens=5000,
+                operation="sentiment_analysis",
+                static_template=static_template,
+                variable_data=variable_data
+            )
             
             return {
                 "generated_at": datetime.now().isoformat(),
@@ -1519,89 +1925,191 @@ class GPTInsightsService:
             print(f"Anthropic API error: {str(e)}")
             return self._generate_mock_sentiment_insights(sentiment_data)
 
-    def _create_sentiment_analysis_prompt(self, sentiment_data: Dict[str, Any]) -> str:
-        """Create prompt for sentiment analysis insights"""
+    def _create_sentiment_analysis_prompt(self, sentiment_data: Dict[str, Any], return_split: bool = False) -> str | tuple[str, str]:
+        """Create prompt for sentiment analysis insights using the new business-focused format with optional splitting for caching"""
         
-        summary = sentiment_data.get("summary", {})
-        sample_reviews = sentiment_data.get("sample_reviews", [])
-        sentiment_distribution = summary.get("sentiment_percentages", {})
-        avg_star_rating = summary.get("average_star_rating", 0)
+        summary = sentiment_data.get("summary", {}) or {}
+        sample_reviews = sentiment_data.get("sample_reviews", []) or []
+        competitor_info = sentiment_data.get("competitor", {}) or {}
+        sentiment_distribution = summary.get("sentiment_percentages", {}) or {}
+        avg_star_rating = summary.get("average_star_rating", 0) or 0
+        total_reviews = summary.get("total_reviews", 0) or len(sample_reviews) or 0
+        avg_polarity = summary.get("average_polarity", 0) or 0
+        avg_subjectivity = summary.get("average_subjectivity", 0) or 0
         
-        # Format sample reviews
+        # Extract competitor information (with fallbacks for backward compatibility)
+        competitor_name = competitor_info.get("name") if competitor_info else None
+        if not competitor_name:
+            # Try to extract from industry/context if available, otherwise use generic
+            competitor_name = sentiment_data.get("industry", sentiment_data.get("competitor_name", "Competitor"))
+        
+        competitor_rating = (competitor_info.get("rating") or 0) if competitor_info else avg_star_rating
+        competitor_review_count = (competitor_info.get("review_count") or total_reviews) if competitor_info else total_reviews
+        
+        # Format sample reviews for the prompt
         reviews_text = ""
-        for i, review in enumerate(sample_reviews[:5]):
-            reviews_text += f"\n{i+1}. Rating: {review.get('Star Rating', 'N/A')}/5\n"
-            reviews_text += f"   Sentiment: {review.get('Sentiment', 'N/A')}\n"
-            reviews_text += f"   Text: {review.get('Review Text', 'N/A')[:100]}...\n"
+        if sample_reviews:
+            for i, review in enumerate(sample_reviews[:10]):
+                rating = review.get('Star Rating', review.get('rating', 'N/A'))
+                sentiment = review.get('Sentiment', review.get('sentiment', 'N/A'))
+                text = review.get('Review Text', review.get('text', review.get('review_text', 'N/A')))
+                # Truncate long reviews
+                if isinstance(text, str) and len(text) > 200:
+                    text = text[:200] + "..."
+                reviews_text += f"\n  - Rating: {rating}/5 | Sentiment: {sentiment} | Text: {text}"
+        else:
+            reviews_text = "\n  - No sample reviews provided"
         
-        return f"""
-        You are Transformellica's Senior Business Insights and Sentiment Analysis Consultant. You specialize in multilingual customer sentiment analysis, topic extraction, and satisfaction analytics. Your purpose is to deliver concise, data-driven insights that help improve customer experience, retention, and brand perception.
-        You will be analyzing sentiment data for SMEs, service providers, and agencies who need actionable business improvements rather than linguistic analysis. All findings must link sentiment to operational or marketing impact.
-        Here is the sentiment dataset to analyze:
-        - Total Reviews: {summary.get('total_reviews', 0)}
+        # Static template (instructions, format) - this can be cached
+        static_template = f"""You are Transformellica's Senior Business Insights & Sentiment Analysis Consultant. You specialize in fast, multilingual customer sentiment analysis, competitor intelligence, and operationally-oriented SWOT for marketing and brand teams. Your audience is Marketing Directors, Brand Strategists, and Agency Leads. Your purpose is to identify competitor strengths and weaknesses and translate customer voice into business-impact insights and prioritized actions — not to prescribe how to copy or implement competitor product features.
+
+        Task:
+
+        You will analyze the provided sentiment dataset and, where needed, enrich competitor context with verifiable public sources to produce a concise, business-focused competitor SWOT and sentiment insight report. Your output must prioritize operational or marketing impact: what the sentiment means for positioning, messaging, product-market fit, and risk. You must NOT present competitor product fixes as direct solutions for the user's business (e.g., "do X because competitor Y does X"). Instead, describe competitor strengths/weaknesses and the opportunities or risks they create for the user.
+
+        Input (do not change this block):
+
+        [Sentiment data will be provided below]
+
+        Context:
+
+        Who uses this report: Marketing Directors, Brand Strategists, Agency Leads.
+
+        Impact required: Identify competitor strengths and weaknesses and audience sentiment in minutes instead of weeks. Turn unstructured reviews into clear, prioritized action points tied to measurable outcomes (KPIs such as conversion lift, retention, NPS, churn reduction, or campaign engagement).
+
+        What you may (optionally) do to enrich analysis:
+
+        If competitor names or public products are referenced in the dataset or by the user, you may consult trusted public sources (official product pages, G2, Trustpilot, major industry publications, vendor docs) to confirm features, pricing tiers, or recent public positioning.
+
+        If you use external sources, include short in-report citations (domain + year) for the 2–3 most load-bearing facts you relied on. Do not link to or paste long quotes. Keep citations minimal and relevant.
+
+        Persona / Tone:
+
+        Write as a senior strategy consultant: concise, decisive, business-first, and evidence-driven. Avoid hype and marketing fluff. Use plain professional English suitable for slide copy or executive briefs.
+
+        Format — Exact Required Output:
+
+        Produce the report exactly in this structure and nothing else. Use short bullets and one-line items where possible.
+
+        <report>
+
+        COMPETITOR & SENTIMENT BUSINESS INSIGHT REPORT
+
+        A. EXECUTIVE SNAPSHOT
+
+        - Who this is for: Marketing Directors / Brand Strategists / Agency Leads
+
+        - Primary objective: (one short sentence describing the report's focus)
+
+        - Dataset summary: [number of reviews, date range if provided, languages]
+
+        B. SENTIMENT HEALTH SCORE: [score]/100
+
+        - Rationale: [brief metric-based justification — distribution, avg rating, polarity]
+
+        C. KEY SENTIMENT THEMES (Top 4)
+
+        - Theme 1: [phrase] — [evidence: % mentions or sample count] — [business implication]
+
+        - Theme 2: ...
+
+        - Theme 3: ...
+
+        - Theme 4: ...
+
+        D. TOP 5 COMPETITOR STRENGTHS (relative to the market)
+
+        - [Competitor name from data] — [strength] — [evidence / citation if external]
+
+        - [Additional strengths based on positive sentiment patterns]
+
+        E. TOP 5 COMPETITOR WEAKNESSES (relative to the market)
+
+        - [Competitor name from data] — [weakness] — [evidence / citation if external]
+
+        - [Additional weaknesses based on negative sentiment patterns]
+
+        F. COMPETITOR SWOT SUMMARY (concise, per competitor)
+
+        - [Competitor name from data]: Strengths ✅ / Weaknesses ❌ / Opportunities ⚠ / Threats ✳ (each 1–2 words)
+
+        G. IMPACT ON YOUR BUSINESS (priority-ranked)
+
+        1) [High-impact risk or opportunity] — [why it matters] — [suggested KPI to measure]
+
+        2) [Medium-impact] — ...
+
+        3) [Low-impact] — ...
+
+        H. ACTIONABLE RECOMMENDATIONS (3–6 items, prioritized)
+
+        - Recommendation 1 — [specific action] — [expected outcome & metric to track]
+
+        - Recommendation 2 — ...
+
+        - Recommendation 3 — ...
+
+        I. QUICK WINS (Immediate, low-effort items)
+
+        - Quick Win 1 — [action] — [estimated time to implement]
+
+        - Quick Win 2 — ...
+
+        J. DATA LIMITATIONS & ASSUMPTIONS
+
+        - [List any limits: sample size, date range, language bias, missing competitor data]
+
+        K. SOURCES (if external enrichment used — list max 3 short citations)
+
+        - domain.com — [year]
+
+        - g2.com — [year]
+
+        Summary: [One-line highest-priority change to execute now]
+
+        </report>
+
+        Guardrails / Restrictions (must follow):
+
+        Base all primary sentiment findings only on the provided <sentiment_data> unless you explicitly cite a source for any external fact.
+
+        Never fabricate review content, competitor features, counts, or ratings. If a claim cannot be verified, state it as "not verifiable from provided data."
+
+        Do NOT recommend copying competitor features or instruct the user to implement competitor product solutions. Frame competitor findings as market context and translate them into strategic options tailored to the user's positioning.
+
+        Avoid generic advice (e.g., "improve product"); every recommendation must include a specific action and a measurable KPI.
+
+        If sample size is small (<50 reviews) or skewed by one source, explicitly flag this under Data Limitations.
+
+        Keep the report concise (target: 12–20 short bullet lines total). Use bullets for clarity; avoid long paragraphs.
+
+        Now analyze the following sentiment data:"""
+        
+        # Variable data (changes per request) - this should NOT be cached
+        sentiment_data_xml = f"""
+        <sentiment_data>
+        Competitor Name: {competitor_name}
+        Competitor Rating: {competitor_rating}/5
+        Total Reviews Analyzed: {total_reviews}
+        Average Star Rating: {avg_star_rating:.2f}/5
+        Sentiment Distribution:
         - Positive: {sentiment_distribution.get('Positive', 0):.1f}%
         - Negative: {sentiment_distribution.get('Negative', 0):.1f}%
         - Neutral: {sentiment_distribution.get('Neutral', 0):.1f}%
-        - Average Star Rating: {avg_star_rating:.1f}/5
-        - Average Sentiment Polarity: {summary.get('average_polarity', 0):.2f}
-        - Average Subjectivity: {summary.get('average_subjectivity', 0):.2f}
+        Average Sentiment Polarity: {avg_polarity:.3f}
+        Average Subjectivity: {avg_subjectivity:.3f}
 
-        SAMPLE REVIEWS:
+        Sample Reviews:
         {reviews_text}
-        Your task is to generate a structured business report with actionable insights based strictly on the provided sentiment data. Before writing your final report, use your scratchpad to analyze the data and identify key patterns.
-
-        <scratchpad>
-        Analyze the sentiment data to identify:
-        - Overall sentiment health based on the distribution and ratings
-        - Key patterns in positive and negative feedback
-        - Specific issues mentioned in negative reviews
-        - Strengths highlighted in positive reviews
-        - Actionable areas for improvement
-        - Calculate a sentiment health score (1-100) based on the metrics provided
-        </scratchpad>
-
-        Write your analysis in the following exact format:
-
-        <report>
-        CUSTOMER SENTIMENT INSIGHT REPORT
-
-        1. SENTIMENT HEALTH SCORE: [score]/100
-        - [Provide clear rationale for the score based on the data]
-
-        2. CUSTOMER SATISFACTION INSIGHTS
-        - [Summary of overall sentiment trends and key emotions based on the data]
-
-        3. TOP 3 AREAS FOR IMPROVEMENT
-        - [Issue 1] — [impact] — [recommended corrective action]
-        - [Issue 2] — [impact] — [recommended corrective action]  
-        - [Issue 3] — [impact] — [recommended corrective action]
-
-        4. POSITIVE ASPECTS TO LEVERAGE
-        - [List 2-3 strengths or themes with promotional potential from positive reviews]
-
-        5. CUSTOMER EXPERIENCE RECOMMENDATIONS
-        - [3-5 specific actions tied to product, service, or communication based on the data]
-
-        6. ACTION ITEMS FOR COMMON COMPLAINTS
-        - [Short list of quick wins based on recurring negative feedback patterns]
-
-        7. STRATEGIES TO INCREASE POSITIVE SENTIMENT
-        - [Targeted retention or engagement ideas based on what drives positive reviews]
-
-        Summary: [One line highlighting the highest-impact change to prioritize based on your analysis]
-        </report>
-
-        Important guidelines:
-        - Base all insights strictly on the provided dataset
-        - Be analytical, objective, and business-focused
-        - Avoid emotional language or generic statements
-        - Support each recommendation with clear reasoning from observed patterns
-        - Mention if data is limited or sample size is small
-        - Prioritize actionable items with measurable outcomes
-        - Never fabricate review content or infer data not provided
-        - Be specific rather than vague (avoid phrases like "customers are unhappy")
-        - Focus on practical actions for management and marketing teams
+        </sentiment_data>
         """
+        
+        if return_split:
+            return (static_template, sentiment_data_xml)
+        
+        return f"""{static_template}
+
+        {sentiment_data_xml}"""
 
     def _parse_sentiment_insights(self, response: str) -> Dict[str, Any]:
         """Parse GPT response for sentiment insights"""

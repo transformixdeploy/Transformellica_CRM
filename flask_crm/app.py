@@ -1368,15 +1368,43 @@ class SmartRAGAssistant:
                 return specific_analysis
             
             data_context = self.create_data_context()
-            prompt = self.create_rag_prompt(question, data_context)
+            
+            # Prepare prompt with caching optimization
+            static_template, variable_data = self.create_rag_prompt(question, data_context, return_split=True)
+            
+            # Prepare messages with cache control for prompt caching
+            system_message = "You are Transformellica's Smart Business Intelligence Assistant for CRM Intelligence. You are a senior BI/marketing strategist who converts raw CRM and transaction datasets into business-impact insights, prioritized actions, and measurable KPIs."
+            
+            # User message with split content (static template cached, variable data not cached)
+            user_content = [
+                {
+                    "type": "text",
+                    "text": static_template,
+                    "cache_control": {"type": "ephemeral"}  # Cache static template
+                },
+                {
+                    "type": "text",
+                    "text": variable_data
+                    # No cache_control - variable data (question + data context) changes per request
+                }
+            ]
             
             response = self.client.messages.create(
                 model="claude-3-5-haiku-latest",
                 max_tokens=5000,
                 temperature=0.7,
-                system="You are a Smart Business Intelligence Assistant.",
+                system=[
+                    {
+                        "type": "text",
+                        "text": system_message,
+                        "cache_control": {"type": "ephemeral"}  # Cache system message
+                    }
+                ],
                 messages=[
-                    {"role": "user", "content": prompt}
+                    {
+                        "role": "user",
+                        "content": user_content
+                    }
                 ]
             )
             
@@ -1396,23 +1424,128 @@ class SmartRAGAssistant:
         except Exception as e:
             return self.fallback_answer(question, str(e))
         
-    def create_rag_prompt(self, question, data_context):
-        prompt = f"""
-You are a Smart Business Intelligence Assistant with direct access to the following dataset:
+    def create_rag_prompt(self, question, data_context, return_split=False):
+        """Create RAG prompt with optional splitting for caching using new business-focused format"""
+        
+        # Static template (instructions, format) - this can be cached
+        static_template = """You are Transformellica's Smart Business Intelligence Assistant for CRM Intelligence. You are a senior BI/marketing strategist who converts raw CRM and transaction datasets into business-impact insights, prioritized actions, and measurable KPIs. Your audience is Marketing Directors, Brand Strategists, and Agency Leads. Focus on business outcomes like (growth, retention, ARPU, churn reduction, campaign targeting), not on low-level data cleaning or raw SQL steps.
 
+IMPORTANT — Do NOT change the data entry format below (use it exactly as provided):
+
+[Data context will be provided below]
+
+Task / Instructions (Business-First):
+
+1. Base all findings strictly on the provided dataset above. Do not invent numbers or infer facts not present. If a requested calculation or insight requires data not included, state that explicitly and give the minimal assumption needed to continue.
+
+2. Prioritize answers that are actionable and measurable — every recommendation must include a suggested KPI (e.g., increase repeat-purchase rate by X%, reduce churn by Y points, raise ARPU by $Z).
+
+3. Pay special attention to COMBINED FIELDS ANALYSIS for product-basket and cross-sell patterns. Use individual_items for single-item popularity and combination_patterns for bundle behavior — rely only on these fields for combo insights.
+
+4. Produce prioritized segments and tactical next actions: e.g., high-value churn risk cohort, top 3 cross-sell bundles, retention campaign target list, pricing/discount sensitivity group, or cart-abandonment triggers — all derived from the dataset.
+
+5. Calculate basic derived KPIs where possible and relevant (using only provided fields): ARPU, repeat-purchase rate, churn proxy (if dates exist), average basket value, top lifetime customer cohorts. If dates or identifiers are missing, state "not derivable" and propose the minimal extra field required.
+
+6. Provide quick-wins (low-effort, high-impact) and medium-term initiatives (automation, segmentation, journey optimization) with estimated implementation effort (hours / days) and expected measurable impact.
+
+7. If the dataset quality metrics show issues (duplicates, missing values, high null %), flag them, estimate the severity (low/medium/high), and provide the priority data cleanup steps needed to trust an analysis.
+
+Optional Enrichment (Strict Rules):
+
+• You may only use external, public benchmarks (e.g., industry retention rates or LTV multipliers) if the user explicitly asks for benchmarking. Any external benchmark used must be cited (domain + year) and clearly labeled as a benchmark assumption.
+
+Persona / Tone:
+
+Answer as a senior BI consultant: concise, decisive, KPI-driven, and directly actionable. Use short bullet lines and minimal prose. Avoid jargon and technical execution steps (no SQL, no internal chain-of-thought). Focus on what management should do and how success will be measured.
+
+Security & Reasoning Guardrails:
+
+• Never expose chain-of-thought or internal scratchpad reasoning. Provide only final findings and rationale.
+
+• Do not produce PII extracts (e.g., raw customer emails, phone numbers, or addresses) in the output. If sample rows include PII in sample_data, redact any sensitive fields in your output evidence.
+
+• Never fabricate data or infer customer-level behavior beyond what the dataset supports.
+
+Output Format — JSON (Strict Schema)
+
+Return a single JSON object exactly in this schema. Use numeric values for calculated metrics, and short strings / arrays for lists. Keep text concise.
+
+{
+  "summary": "One-line executive summary with top priority action",
+  "dataset_overview": {
+    "records": integer,
+    "key_columns": ["col1","col2"],
+    "data_quality_flag": "ok|low|medium|high"
+  },
+  "derived_metrics": {
+    "ARPU": number | null,
+    "avg_basket_value": number | null,
+    "repeat_purchase_rate": number | null,
+    "churn_proxy_rate": number | null,
+    "top_3_products_by_revenue": [{"product":"name","revenue":number}, ...]
+  },
+  "priority_segments": [
+    {
+      "name": "High-Value Churn Risk",
+      "criteria": "short human-readable rule using provided columns",
+      "size": integer,
+      "current_value": number,
+      "recommended_action": "e.g., winback campaign with offer X",
+      "expected_kpi_impact": {"metric":"% change or absolute number","timeframe":"30/90 days"}
+    }
+  ],
+  "cross_sell_opportunities": [
+    {
+      "bundle": ["itemA","itemB"],
+      "observed_frequency": number,
+      "estimated_uplift_if_promoted": {"metric":"% uplift","basis":"assumption or dataset-derived"}
+    }
+  ],
+  "actionable_recommendations": [
+    {
+      "title": "Quick Win — example",
+      "description": "One-sentence action",
+      "effort": "hours/days",
+      "expected_impact": {"metric":"example","value":number,"timeframe":"30/90 days"},
+      "confidence": "high|medium|low"
+    }
+  ],
+  "data_issues_and_next_steps": [
+    {"issue":"e.g., high null rate in column X","severity":"low|medium|high","fix_action":"suggested fix","est_time":"hours/days"}
+  ],
+  "assumptions_and_limits": ["List of assumptions or missing fields preventing further calculation"],
+  "follow_up_questions": ["1-3 concise questions to refine the analysis"]
+}
+
+Final Instructions:
+
+• Be specific and use actual values from the dataset wherever possible. If a field is not present and prevents a calculation, set the related metric to null and list the missing field in assumptions_and_limits.
+
+• Keep the JSON compact and machine-parseable (avoid long prose).
+
+• Target the output to be immediately actionable by a marketing or growth manager.
+
+Now analyze the following data context and answer the user's question:"""
+        
+        # Variable data (changes per request) - this should NOT be cached
+        variable_data = f"""
 BUSINESS CONTEXT:
+
 - Domain: {data_context['metadata']['business_domain']}
 - Entity Type: {data_context['metadata']['primary_entity']}
 - Total Records: {data_context['metadata']['total_records']:,}
 - Columns: {', '.join(data_context['metadata']['columns'])}
 
 STATISTICAL SUMMARY:
+
 {json.dumps(data_context['statistical_summary'], indent=2)}
 
 CATEGORICAL DATA INSIGHTS:
+
 {json.dumps(data_context['categorical_insights'], indent=2)}
 
 COMBINED FIELDS ANALYSIS (Products, Tags, etc.):
+
 {json.dumps(data_context['combined_fields_analysis'], indent=2)}
 
 IMPORTANT: When analyzing combined fields, use the data provided above consistently:
@@ -1421,41 +1554,25 @@ IMPORTANT: When analyzing combined fields, use the data provided above consisten
 - Always reference the SAME data source to avoid contradictions
 
 DATA QUALITY METRICS:
+
 {json.dumps(data_context['data_quality'], indent=2)}
 
 SAMPLE DATA (First {len(data_context['sample_data'])} records):
+
 {json.dumps(data_context['sample_data'], indent=2)}
 
 USER QUESTION: "{question}"
-
-Instructions:
-1. Pay special attention to COMBINED FIELDS ANALYSIS - this contains both individual items AND combination patterns
-2. For individual products: Use the 'individual_items' section
-3. For product combinations: Use the 'combination_patterns' section
-4. ALWAYS reference the exact same data shown above - don't perform separate analysis
-5. Be consistent with naming and counts across different questions
-6. Provide specific, data-driven answers based on the actual dataset
-7. Include relevant statistics, trends, and patterns
-8. If you need to make assumptions, state them clearly
-
-Respond in JSON format:
-{{
-    "analysis": "Detailed answer to the user's question",
-    "confidence": 0.85,
-    "key_findings": ["Finding 1", "Finding 2", "Finding 3"],
-    "relevant_statistics": {{"stat_name": "value", "description": "explanation"}},
-    "actionable_insights": ["Insight 1", "Insight 2"],
-    "data_evidence": ["Evidence 1", "Evidence 2"],
-    "confidence_level": "high",
-    "follow_up_questions": ["Question 1", "Question 2"]
-}}
-
-Be specific, use actual data values, and provide concrete insights based on the dataset provided.
 """
         
-        return prompt
+        if return_split:
+            return (static_template, variable_data)
+        
+        return f"""{static_template}
+
+{variable_data}"""
     
     def parse_rag_response(self, response_text, original_question):
+        """Parse RAG response - handles both new and old format for compatibility"""
         try:
             clean_response = response_text.strip()
             if clean_response.startswith('```json'):
@@ -1465,20 +1582,28 @@ Be specific, use actual data values, and provide concrete insights based on the 
             
             parsed = json.loads(clean_response)
             
-            confidence = parsed.get('confidence', 0.7)
-            if confidence > 1:
-                confidence = confidence / 100
-            
-            return {
-                "analysis": parsed.get('analysis', ''),
-                "confidence": float(confidence),
-                "key_findings": parsed.get('key_findings', []),
-                "relevant_statistics": parsed.get('relevant_statistics', {}),
-                "actionable_insights": parsed.get('actionable_insights', []),
-                "data_evidence": parsed.get('data_evidence', []),
-                "confidence_level": parsed.get('confidence_level', 'medium'),
-                "follow_up_questions": parsed.get('follow_up_questions', [])
-            }
+            # Check if it's the new format (has 'summary' and 'dataset_overview')
+            if 'summary' in parsed and 'dataset_overview' in parsed:
+                # New format - convert to old format for compatibility
+                return self._convert_new_format_to_old(parsed)
+            else:
+                # Old format - handle as before
+                confidence = parsed.get('confidence', 0.7)
+                if confidence > 1:
+                    confidence = confidence / 100
+                
+                return {
+                    "analysis": parsed.get('analysis', ''),
+                    "confidence": float(confidence),
+                    "key_findings": parsed.get('key_findings', []),
+                    "relevant_statistics": parsed.get('relevant_statistics', {}),
+                    "actionable_insights": parsed.get('actionable_insights', []),
+                    "data_evidence": parsed.get('data_evidence', []),
+                    "confidence_level": parsed.get('confidence_level', 'medium'),
+                    "follow_up_questions": parsed.get('follow_up_questions', []),
+                    # Include new format data for potential future use
+                    "new_format_data": parsed
+                }
             
         except json.JSONDecodeError as e:
             return {
@@ -1491,6 +1616,89 @@ Be specific, use actual data values, and provide concrete insights based on the 
                 "confidence_level": "low",
                 "follow_up_questions": []
             }
+    
+    def _convert_new_format_to_old(self, new_format_data):
+        """Convert new CRM prompt format to old format for compatibility"""
+        # Extract summary as analysis
+        analysis = new_format_data.get('summary', '')
+        
+        # Build key findings from various sections
+        key_findings = []
+        
+        # Add priority segments as findings
+        priority_segments = new_format_data.get('priority_segments', [])
+        for segment in priority_segments[:3]:
+            key_findings.append(f"{segment.get('name', 'Segment')}: {segment.get('criteria', 'N/A')} - Size: {segment.get('size', 0)}")
+        
+        # Add cross-sell opportunities
+        cross_sell = new_format_data.get('cross_sell_opportunities', [])
+        for opp in cross_sell[:2]:
+            bundle = opp.get('bundle', [])
+            key_findings.append(f"Cross-sell: {' + '.join(bundle)} - Frequency: {opp.get('observed_frequency', 0)}")
+        
+        # If not enough findings, add derived metrics
+        if len(key_findings) < 3:
+            derived = new_format_data.get('derived_metrics', {})
+            if derived.get('ARPU'):
+                key_findings.append(f"ARPU: ${derived['ARPU']:.2f}")
+            if derived.get('avg_basket_value'):
+                key_findings.append(f"Avg Basket Value: ${derived['avg_basket_value']:.2f}")
+        
+        # Convert actionable_recommendations to actionable_insights
+        actionable_insights = []
+        recommendations = new_format_data.get('actionable_recommendations', [])
+        for rec in recommendations:
+            title = rec.get('title', '')
+            desc = rec.get('description', '')
+            impact = rec.get('expected_impact', {})
+            if impact:
+                metric = impact.get('metric', '')
+                value = impact.get('value', '')
+                timeframe = impact.get('timeframe', '')
+                actionable_insights.append(f"{title}: {desc} - Expected: {metric} {value} in {timeframe}")
+            else:
+                actionable_insights.append(f"{title}: {desc}")
+        
+        # Build relevant statistics from derived_metrics
+        relevant_statistics = {}
+        derived = new_format_data.get('derived_metrics', {})
+        if derived.get('ARPU'):
+            relevant_statistics['ARPU'] = derived['ARPU']
+        if derived.get('avg_basket_value'):
+            relevant_statistics['avg_basket_value'] = derived['avg_basket_value']
+        if derived.get('repeat_purchase_rate'):
+            relevant_statistics['repeat_purchase_rate'] = derived['repeat_purchase_rate']
+        
+        # Build data evidence from data issues and assumptions
+        data_evidence = []
+        data_issues = new_format_data.get('data_issues_and_next_steps', [])
+        for issue in data_issues[:2]:
+            data_evidence.append(f"{issue.get('issue', '')} - Severity: {issue.get('severity', 'unknown')}")
+        
+        assumptions = new_format_data.get('assumptions_and_limits', [])
+        for assumption in assumptions[:2]:
+            data_evidence.append(f"Assumption: {assumption}")
+        
+        # Determine confidence level from dataset overview
+        dataset_overview = new_format_data.get('dataset_overview', {})
+        data_quality_flag = dataset_overview.get('data_quality_flag', 'medium')
+        confidence_level = 'high' if data_quality_flag == 'ok' else 'medium' if data_quality_flag == 'low' else 'low'
+        
+        # Calculate confidence score
+        confidence = 0.9 if confidence_level == 'high' else 0.7 if confidence_level == 'medium' else 0.5
+        
+        return {
+            "analysis": analysis,
+            "confidence": float(confidence),
+            "key_findings": key_findings[:5] if key_findings else ["Analysis completed"],
+            "relevant_statistics": relevant_statistics,
+            "actionable_insights": actionable_insights[:5] if actionable_insights else [],
+            "data_evidence": data_evidence[:4] if data_evidence else [],
+            "confidence_level": confidence_level,
+            "follow_up_questions": new_format_data.get('follow_up_questions', []),
+            # Include new format data for potential future use
+            "new_format_data": new_format_data
+        }
     
     def fallback_answer(self, question, error_msg=None):
         question_lower = question.lower()
@@ -1595,18 +1803,51 @@ def generate_dashboard_insights(df, schema_analysis):
         
         data_context = create_dashboard_context(df, schema_analysis)
         
-        prompt = create_dashboard_prompt(data_context)
+        # Prepare prompt with caching optimization
+        static_template, variable_data = create_dashboard_prompt(data_context, return_split=True)
+        
+        # Prepare messages with cache control for prompt caching
+        # System message with cache control
+        system_message = "You are a Business Intelligence Dashboard Generator."
+        
+        # User message with split content (static template cached, variable data not cached)
+        user_content = [
+            {
+                "type": "text",
+                "text": static_template,
+                "cache_control": {"type": "ephemeral"}  # Cache static template
+            },
+            {
+                "type": "text",
+                "text": variable_data
+                # No cache_control - variable data changes per request
+            }
+        ]
+        
         response = client.messages.create(
             model="claude-3-5-haiku-latest",
             max_tokens=5000,
             temperature=0.7,
-            system="You are a Business Intelligence Dashboard Generator.",
+            system=[
+                {
+                    "type": "text",
+                    "text": system_message,
+                    "cache_control": {"type": "ephemeral"}  # Cache system message
+                }
+            ],
             messages=[
-                {"role": "user", "content": prompt}
+                {
+                    "role": "user",
+                    "content": user_content
+                }
             ]
         )
         
-        ai_insights = parse_dashboard_response(response.content[0].text)
+        ai_insights_raw = parse_dashboard_response(response.content[0].text)
+        
+        # Convert new format to old format for compatibility
+        ai_insights = convert_dashboard_response_format(ai_insights_raw)
+        
         calculated_metrics = calculate_dashboard_metrics(df, schema_analysis)
         
         dashboard_data = merge_dashboard_data(ai_insights, calculated_metrics, df, schema_analysis)
@@ -1747,6 +1988,11 @@ def create_dashboard_context(df, schema_analysis):
     
     completeness = (df.notna().sum().sum() / (len(df) * len(df.columns))) * 100
     
+    # Add combined fields analysis and data quality (needed for new prompt)
+    rag_assistant = SmartRAGAssistant(df, schema_analysis)
+    combined_fields_analysis = rag_assistant.get_combined_fields_analysis()
+    data_quality = rag_assistant.analyze_data_quality()
+    
     return {
         "metadata": {
             "business_domain": schema_analysis.get('business_domain', 'general business'),
@@ -1758,77 +2004,198 @@ def create_dashboard_context(df, schema_analysis):
         },
         "statistical_summary": statistical_summary,
         "categorical_insights": categorical_insights,
+        "combined_fields_analysis": combined_fields_analysis,
+        "data_quality": data_quality,
         "sample_data": df.head(5).to_dict('records')
     }
 
 
-def create_dashboard_prompt(data_context):
-    return f"""You are a Senior Business Intelligence Consultant creating executive dashboard insights. Your analysis will directly inform strategic business decisions.
+def create_dashboard_prompt(data_context, return_split=False):
+    """Create dashboard prompt with optional splitting for caching"""
+    
+    # Static template (instructions, format) - this can be cached
+    static_template = """You are Transformellica's Smart Dashboard Intelligence Assistant. You specialize in converting CRM, sales, and marketing datasets into dashboard-ready summaries, KPIs, and visualization recommendations.
 
-## EXECUTIVE SUMMARY
-**Business Domain**: {data_context['metadata']['business_domain']}
-**Primary Business Entity**: {data_context['metadata']['primary_entity']}
-**Data Scale**: {data_context['metadata']['total_records']:,} records
-**Data Reliability**: {data_context['metadata']['data_completeness']:.1f}% complete
+Your role is not to calculate or display raw statistics (mean, std, quantiles, etc.), but to design data stories — identifying what should be shown on a dashboard and why.
 
-## PERFORMANCE METRICS
-{json.dumps(data_context['statistical_summary'], indent=2) if data_context['statistical_summary'] else "No quantitative metrics available"}
+Your audience: Marketing Directors, Agency Leads, and Strategy Managers.
 
-## BUSINESS SEGMENTS
-{json.dumps(data_context['categorical_insights'], indent=2) if data_context['categorical_insights'] else "No segmentation data available"}
+Your purpose: Transform structured data into clear, decision-oriented components that reveal business performance, opportunities, and behavioral patterns.
 
-## OPERATIONAL DATA SAMPLE
-```json
-{json.dumps(data_context['sample_data'][:5], indent=2)}
-```
+⸻
 
----
+DO NOT CHANGE THE INPUT STRUCTURE BELOW:
 
-## DASHBOARD REQUIREMENTS
+[Data context will be provided below]
 
-Generate strategic business insights formatted as JSON:
+⸻
 
-```json
-{{
-    "primaryInsights": [
-        "Executive-level insight about business performance and opportunities",
-        "Data quality insight affecting decision-making reliability", 
-        "Market positioning or competitive advantage insight from the data",
-        "Operational efficiency or resource optimization finding",
-        "Risk assessment or business threat identification"
-    ],
-    "actionableInsights": [
-        "Immediate strategic action with clear ROI potential",
-        "Operational improvement with measurable impact",
-        "Market opportunity with specific next steps",
-        "Risk mitigation strategy based on data patterns"
-    ],
-    "nextSteps": [
-        "Priority action item for the next 30 days",
-        "Strategic initiative for next quarter",
-        "Data collection or analysis improvement needed",
-        "Process optimization recommendation"
-    ]
-}}
-```
+Task / Instructions (Dashboard Logic)
 
-## ANALYSIS FRAMEWORK
-1. **Strategic Impact**: Focus on insights that affect revenue, costs, or competitive position
-2. **Measurable Outcomes**: Quantify opportunities and risks where possible
-3. **Actionability**: Every insight should connect to specific business actions
-4. **Executive Perspective**: Frame findings for C-level decision makers
-5. **Data-Driven**: Ground recommendations in actual data patterns
+1. You are not a statistical calculator.
 
-## BUSINESS CONTEXT REQUIREMENTS
-- Address domain-specific KPIs and success metrics
-- Consider industry benchmarks and best practices
-- Identify growth opportunities and efficiency gains
-- Highlight data-driven competitive advantages
-- Assess operational risks and mitigation strategies
+Do not compute mean, std, median, quantile, or other numeric aggregations. Use the existing summaries only for context.
 
-Generate insights that transform raw data into strategic business intelligence.
+2. Your purpose is dashboard generation.
+
+Identify what the user should visualize — KPIs, category trends, product combinations, performance breakdowns, or behavioral segments.
+
+3. From the dataset above, generate:
+
+• A list of key dashboard metrics (e.g., sales trends, top products, churn risk, engagement split).
+
+• Recommended visual types for each (bar, pie, line, heatmap, table, or KPI card).
+
+• A short insight description for each visual — what story it tells and why it matters.
+
+4. Use the COMBINED FIELDS ANALYSIS section to highlight:
+
+• Top-selling or most frequent product pairs (for basket or bundle visualization).
+
+5. Use CATEGORICAL DATA INSIGHTS for audience composition, regional breakdown, or customer segments.
+
+6. From DATA QUALITY METRICS, indicate whether a dashboard should include data quality or confidence badges (low/medium/high).
+
+7. Each visualization should directly tie to a business decision or metric — never produce visuals "for display only."
+
+8. Each insight should be concise, measurable, and linked to a marketing or sales objective (e.g., conversion uplift, retention rate, campaign ROI).
+
+9. Do not show formulas, raw data, or numeric tables — only visualization logic and summarized patterns.
+
+⸻
+
+Guardrails
+
+• Never calculate new statistics or fabricate missing data.
+
+• Never use placeholders like "unknown data" — instead, state what data is missing for a given visualization.
+
+• Focus on insights and visualization usefulness — not descriptive analytics.
+
+⸻
+
+Output Format (JSON structure remains the same)
+
+{
+  "analysis": "High-level summary of what the dashboard should reveal",
+  "confidence": 0.9,
+  "key_findings": [
+    "Finding 1 — what key business insight this dataset can visualize",
+    "Finding 2 — category or trend-based story",
+    "Finding 3 — behavioral or cross-sell pattern"
+  ],
+  "relevant_statistics": {
+    "visual_focus": "Describe which metrics or columns are most dashboard-relevant (not computed values)",
+    "layout_suggestion": "E.g., KPI cards for totals, bar chart for top items, heatmap for relationships"
+  },
+  "actionable_insights": [
+    "Insight 1 — why this metric matters for management",
+    "Insight 2 — recommended dashboard comparison (e.g., region vs category)"
+  ],
+  "data_evidence": [
+    "Evidence 1 — e.g., 'top_10_combinations shows strong link between A & B products'",
+    "Evidence 2 — e.g., 'categorical_insights reveal 70% of clients in segment X'"
+  ],
+  "confidence_level": "high"
+}
+
+⸻
+
+Final Instructions
+
+• Output must describe visualization logic, not statistical summaries.
+
+• Use short, clear phrasing suitable for direct dashboard rendering.
+
+• Ensure consistency across questions (same column names, same data sources).
+
+• Prioritize insights that reduce reporting time and increase strategic visibility for the business user.
+
+Now analyze the following data context:"""
+    
+    # Variable data (changes per request) - this should NOT be cached
+    variable_data = f"""
+BUSINESS CONTEXT:
+
+- Domain: {data_context['metadata']['business_domain']}
+- Entity Type: {data_context['metadata']['primary_entity']}
+- Total Records: {data_context['metadata']['total_records']:,}
+- Columns: {', '.join(data_context['metadata']['columns'])}
+
+STATISTICAL SUMMARY:
+
+{json.dumps(data_context['statistical_summary'], indent=2)}
+
+CATEGORICAL DATA INSIGHTS:
+
+{json.dumps(data_context['categorical_insights'], indent=2)}
+
+COMBINED FIELDS ANALYSIS (Products, Tags, etc.):
+
+{json.dumps(data_context.get('combined_fields_analysis', {}), indent=2)}
+
+IMPORTANT: When analyzing combined fields, use the data provided above consistently:
+- For individual item popularity: Use 'individual_items' -> 'top_10_individual_items'
+- For combination patterns: Use 'combination_patterns' -> 'top_10_combinations'
+- Always reference the SAME data source to avoid contradictions
+
+DATA QUALITY METRICS:
+
+{json.dumps(data_context.get('data_quality', {}), indent=2)}
+
+SAMPLE DATA (First {len(data_context['sample_data'])} records):
+
+{json.dumps(data_context['sample_data'], indent=2)}
 """
+    
+    if return_split:
+        return (static_template, variable_data)
+    
+    return f"""{static_template}
 
+{variable_data}"""
+
+
+def convert_dashboard_response_format(new_format_response):
+    """Convert new dashboard response format to old format for compatibility"""
+    if not new_format_response:
+        return {}
+    
+    # New format has: analysis, key_findings, actionable_insights, relevant_statistics, data_evidence, confidence_level
+    # Old format expects: primaryInsights, actionableInsights, nextSteps
+    
+    primary_insights = []
+    actionable_insights = []
+    next_steps = []
+    
+    # Convert analysis to primary insights
+    if new_format_response.get('analysis'):
+        primary_insights.append(new_format_response['analysis'])
+    
+    # Convert key_findings to primary insights
+    if new_format_response.get('key_findings'):
+        primary_insights.extend(new_format_response['key_findings'][:3])  # Take first 3
+    
+    # Convert actionable_insights
+    if new_format_response.get('actionable_insights'):
+        actionable_insights = new_format_response['actionable_insights'][:4]  # Take first 4
+    
+    # Convert data_evidence to next steps
+    if new_format_response.get('data_evidence'):
+        next_steps = new_format_response['data_evidence'][:3]  # Take first 3
+    
+    # If we don't have enough, use relevant_statistics
+    if len(primary_insights) < 3 and new_format_response.get('relevant_statistics'):
+        stats = new_format_response['relevant_statistics']
+        if isinstance(stats, dict):
+            for key, value in list(stats.items())[:2]:
+                primary_insights.append(f"{key}: {value}")
+    
+    return {
+        "primaryInsights": primary_insights[:5] if primary_insights else ["Dashboard analysis completed"],
+        "actionableInsights": actionable_insights[:4] if actionable_insights else [],
+        "nextSteps": next_steps[:4] if next_steps else []
+    }
 
 def parse_dashboard_response(response_text):
     try:
