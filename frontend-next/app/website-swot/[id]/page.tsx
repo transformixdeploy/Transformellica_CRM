@@ -24,6 +24,7 @@ interface Props {
 
 const WebsiteSWOT = ({params} : Props) => {
     const router = useRouter();    
+    const searchParams = useSearchParams();
     
     const [data, setData] = useState(websiteSWOTData);
     const [dataHistory, setDataHistory] = useState([{title: "", id: "", categoryUrl: ""}]);
@@ -34,8 +35,6 @@ const WebsiteSWOT = ({params} : Props) => {
     useEffect(()=>{
     
         if(!accessToken) return;
-        const searchParams = useSearchParams();
-      
         const getData = async ()=>{
             
             // Get user social analysis history
