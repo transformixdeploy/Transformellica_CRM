@@ -14,6 +14,8 @@ import CheckingUserCard from '@/components/CheckingUserCard';
 import { checkServiceLimitReached, createInstagramAnalysisData, createTikTokAnalysisData, getDataHistory, getUserData, storeInstagramAnalysisData, storeTiktokAnalysisData } from '@/utilities/axiosRequester';
 import UserDataHistory from '@/components/UserDataHistory';
 import { useSearchParams } from 'next/navigation';
+import NormalSkeleton from '@/components/NormalSkeleton';
+import BoxSkeleton from '@/components/BoxSkeleton';
 
 // Custom Tooltip Component
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -81,7 +83,7 @@ const SocialSWOT = ({params} : Props) => {
             return router.push("/");
           }
 
-          var response;
+          let response;
 
           if(serviceId === "tiktok_analysis"){
             response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/social/tiktok-analysis`, {
@@ -119,7 +121,7 @@ const SocialSWOT = ({params} : Props) => {
           const decoder = new TextDecoder("utf-8");
           let buffer = "";
 
-          var finalData;
+          let finalData;
       
           while (true) {
             const { value, done } = await reader!.read();
@@ -201,15 +203,24 @@ const SocialSWOT = ({params} : Props) => {
         <section className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
           <div className="bg-gray-800 rounded-lg shadow-xl p-6 text-center">
             <h2 className="text-xl font-semibold text-gray-200 mb-2">Followers</h2>
-            <p className="text-5xl font-bold text-purple-400">{data.followers}</p>
+            {data.followers !== null ?
+              <p className="text-5xl font-bold text-purple-400">{data.followers}</p> :
+              <NormalSkeleton />
+            }
           </div>
           <div className="bg-gray-800 rounded-lg shadow-xl p-6 text-center">
             <h2 className="text-xl font-semibold text-gray-200 mb-2">Following</h2>
-            <p className="text-5xl font-bold text-teal-400">{data.following}</p>
+            {data.following !== null ?
+              <p className="text-5xl font-bold text-teal-400">{data.following}</p> : 
+              <NormalSkeleton/>
+            }
           </div>
           <div className="bg-gray-800 rounded-lg shadow-xl p-6 text-center">
             <h2 className="text-xl font-semibold text-gray-200 mb-2">Engagement Rate</h2>
-            <p className="text-5xl font-bold text-pink-400">{Math.round(data.engagementRate * 100)}%</p>
+            {data.engagementRate !== null ?
+              <p className="text-5xl font-bold text-pink-400">{Math.round(data.engagementRate * 100)}%</p> : 
+              <NormalSkeleton/>
+            }
           </div>
         </section>
   
@@ -219,11 +230,41 @@ const SocialSWOT = ({params} : Props) => {
           <div className="bg-gray-800 rounded-lg shadow-xl p-8 border border-gray-700">
             <h2 className="text-3xl font-bold text-white mb-6 text-center">Profile Information</h2>
             <div className="space-y-4 text-lg">
-              <p><span className="font-semibold text-gray-300">Name:</span> {data.profileInfo.basicInfo.name}</p>
-              <p><span className="font-semibold text-gray-300">Bio:</span> {data.profileInfo.basicInfo.bio}</p>
-              <p className={`${data.profileInfo.basicInfo.verified ? "text-green-500" : "text-red-500"} font-bold`}><span className="font-semibold text-gray-300">Verified:</span> {data.profileInfo.basicInfo.verified ? 'Yes' : 'No'}</p>
-              <p className={`${data.profileInfo.basicInfo.private ? "text-green-500" : "text-red-500"} font-bold`}><span className="font-semibold text-gray-300">Private:</span> {data.profileInfo.basicInfo.private ? 'Yes' : 'No'}</p>
-              <p><span className="font-semibold text-gray-300">Website:</span> <Link href={data.profileInfo.basicInfo.website} target="_blank" rel="noopener noreferrer" className="text-blue-400 break-words hover:underline">{data.profileInfo.basicInfo.website}</Link></p>
+              <p>
+                <span className="me-2 font-semibold text-gray-300">Name:</span>
+                {data.profileInfo.basicInfo.name !== null? 
+                  data.profileInfo.basicInfo.name : 
+                  <NormalSkeleton width={"30%"}/>
+                }
+              </p>
+              <p>
+                <span className="me-2 font-semibold text-gray-300">Bio:</span>
+                {data.profileInfo.basicInfo.bio !== null ? 
+                  data.profileInfo.basicInfo.bio:
+                  <NormalSkeleton width={"30%"}/>
+                }
+              </p>
+              <p className={`${data.profileInfo.basicInfo.verified ? "text-green-500" : "text-red-500"} font-bold`}>
+                <span className="me-2 font-semibold text-gray-300">Verified:</span>
+                {data.profileInfo.basicInfo.verified !== null ? 
+                  (data.profileInfo.basicInfo.verified ? 'Yes' : 'No') :
+                  <NormalSkeleton width={"10%"}/>
+                }
+              </p>
+              <p className={`${data.profileInfo.basicInfo.private ? "text-green-500" : "text-red-500"} font-bold`}>
+                <span className="me-2 font-semibold text-gray-300">Private:</span>
+                {data.profileInfo.basicInfo.private !== null ? 
+                  (data.profileInfo.basicInfo.private ? 'Yes' : 'No') :
+                  <NormalSkeleton width={"10%"}/>
+                }
+              </p>
+              <p>
+                <span className="me-2 font-semibold text-gray-300">Website:</span> 
+                {data.profileInfo.basicInfo.website !== null ? 
+                  <Link href={data.profileInfo.basicInfo.website} target="_blank" rel="noopener noreferrer" className="text-blue-400 break-words hover:underline">{data.profileInfo.basicInfo.website}</Link> :
+                  <NormalSkeleton width={"30%"}/>
+                }
+              </p>
             </div>
           </div>
   
@@ -233,36 +274,54 @@ const SocialSWOT = ({params} : Props) => {
             <div className="space-y-6">
               <div className="max-sm:flex-col max-sm:gap-3 flex items-center justify-between p-4 bg-gray-700/50 rounded-lg border border-gray-600">
                 <span className="font-semibold text-gray-300 text-lg">Posts Count:</span>
-                <span className="text-xl font-bold text-blue-400">{data.profileInfo.additionalMetrics.postsCount}</span>
+                {data.profileInfo.additionalMetrics.postsCount !== null ? 
+                  <span className="text-xl font-bold text-blue-400">{data.profileInfo.additionalMetrics.postsCount}</span> :
+                  <NormalSkeleton width={100}/>
+                }
               </div>
               
               <div className="max-sm:flex-col max-sm:gap-3 flex items-center justify-between p-4 bg-gray-700/50 rounded-lg border border-gray-600">
                 <span className="font-semibold text-gray-300 text-lg">Average Likes:</span>
                 <div className="flex items-center gap-3">
-                  <span className="text-xl font-bold text-pink-400">{data.profileInfo.additionalMetrics.averageLikes.toFixed(2)}</span>
-                  <div className="p-2 bg-pink-500/20 rounded-full border border-pink-500/30">
-                    <ThumbsUp className="w-5 h-5 text-pink-400" />
-                  </div>
+                  {data.profileInfo.additionalMetrics.averageLikes !== null ? 
+                    <span className="text-xl font-bold text-pink-400">{data.profileInfo.additionalMetrics.averageLikes.toFixed(2)}</span> : 
+                    <NormalSkeleton width={100}/>
+                  }
+                  {(data.profileInfo.additionalMetrics.averageLikes !== null) && 
+                    <div className="p-2 bg-pink-500/20 rounded-full border border-pink-500/30">
+                      <ThumbsUp className="w-5 h-5 text-pink-400" />
+                    </div>
+                  }
                 </div>
               </div>
               
               <div className="max-sm:flex-col max-sm:gap-3 flex items-center justify-between p-4 bg-gray-700/50 rounded-lg border border-gray-600">
                 <span className="font-semibold text-gray-300 text-lg">Average Comments:</span>
                 <div className="flex items-center gap-3">
-                  <span className="text-xl font-bold text-blue-400">{data.profileInfo.additionalMetrics.averageComments.toFixed(2)}</span>
-                  <div className="p-2 bg-blue-500/20 rounded-full border border-blue-500/30">
-                    <MessageSquareMore className="w-5 h-5 text-blue-400" />
-                  </div>
+                  {data.profileInfo.additionalMetrics.averageComments !== null ?
+                    <span className="text-xl font-bold text-blue-400">{data.profileInfo.additionalMetrics.averageComments.toFixed(2)}</span> :
+                    <NormalSkeleton width={100}/>
+                  }
+                  {data.profileInfo.additionalMetrics.averageComments !== null && 
+                    <div className="p-2 bg-blue-500/20 rounded-full border border-blue-500/30">
+                      <MessageSquareMore className="w-5 h-5 text-blue-400" />
+                    </div>
+                  }
                 </div>
               </div>
               
               <div className="max-sm:flex-col max-sm:gap-3 flex text-center items-center justify-between p-4 bg-gray-700/50 rounded-lg border border-gray-600">
                 <span className="font-semibold text-gray-300 text-lg">Average Engagement Per Post:</span>
                 <div className="flex items-center gap-3">
-                  <span className="text-xl font-bold text-green-400">{data.profileInfo.additionalMetrics.EngagementPerPost.toFixed(2)}</span>
-                  <div className="p-2 bg-green-500/20 rounded-full border border-green-500/30">
-                    <HeartPlus className="w-5 h-5 text-green-400" />
-                  </div>
+                  {data.profileInfo.additionalMetrics.EngagementPerPost !== null ? 
+                    <span className="text-xl font-bold text-green-400">{data.profileInfo.additionalMetrics.EngagementPerPost.toFixed(2)}</span> :
+                    <NormalSkeleton width={100}/>
+                  }
+                  {data.profileInfo.additionalMetrics.EngagementPerPost !== null &&
+                    <div className="p-2 bg-green-500/20 rounded-full border border-green-500/30">
+                      <HeartPlus className="w-5 h-5 text-green-400" />
+                    </div>
+                  }
                 </div>
               </div>
             </div>
@@ -273,21 +332,24 @@ const SocialSWOT = ({params} : Props) => {
         <section className="mb-12">
           <h2 className="text-4xl font-bold text-white mb-8 text-center">Top Hashtags Usage</h2>
           <div className="bg-gray-800 rounded-lg shadow-xl p-6">
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart
-                data={data.topHashTags}
-                margin={{
-                  top: 20, right: 30, left: 20, bottom: 5,
-                }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#4B5563" />
-                <XAxis dataKey="tag" stroke="#9CA3AF" />
-                <YAxis stroke="#9CA3AF" />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                <Bar dataKey="frequency" fill="#82ca9d" name="Frequency" />
-              </BarChart>
-            </ResponsiveContainer>
+            {data.topHashTags !== null ? 
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart
+                  data={data.topHashTags}
+                  margin={{
+                    top: 20, right: 30, left: 20, bottom: 5,
+                  }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#4B5563" />
+                  <XAxis dataKey="tag" stroke="#9CA3AF" />
+                  <YAxis stroke="#9CA3AF" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <Bar dataKey="frequency" fill="#82ca9d" name="Frequency" />
+                </BarChart>
+              </ResponsiveContainer> :
+              <BoxSkeleton width={"100%"} height={300} borderRadius={"2%"} />
+            }
           </div>
         </section>
   
@@ -295,18 +357,21 @@ const SocialSWOT = ({params} : Props) => {
         <section className="mb-12 ">
           <h2 className="text-4xl font-bold text-white mb-8 text-center">Full Social Analysis</h2>
           <div className="bg-gray-800 rounded-lg shadow-xl p-8 border border-gray-700">
-            {/* <div className="break-words prose prose-invert text-gray-300 leading-relaxed"> */}
-            <div className="prose prose-invert break-words max-w-none text-gray-300 leading-relaxed
-                [&_pre]:whitespace-pre-wrap
-                [&_pre]:break-words
-                [&_pre]:bg-gray-800
-                [&_pre]:rounded-xl
-                [&_pre]:p-4
-                [&_code]:break-words">
-              <ReactMarkdown>
-                {data.fullSocialAnalysis}
-              </ReactMarkdown>
-            </div>
+            {data.fullSocialAnalysis !== null ? 
+              // <div className="break-words prose prose-invert text-gray-300 leading-relaxed">
+              <div className="prose prose-invert break-words max-w-none text-gray-300 leading-relaxed
+                  [&_pre]:whitespace-pre-wrap
+                  [&_pre]:break-words
+                  [&_pre]:bg-gray-800
+                  [&_pre]:rounded-xl
+                  [&_pre]:p-4
+                  [&_code]:break-words">
+                <ReactMarkdown>
+                  {data.fullSocialAnalysis}
+                </ReactMarkdown>
+              </div> :
+              <NormalSkeleton count={5.5}/>
+            }
           </div>
         </section>
   

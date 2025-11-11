@@ -152,65 +152,65 @@ interface Patterns {
 }
 
 interface WebsiteSWOTData {
-    pageSpeedScore: number,
-    internalLinks: number,
-    externalLinks: number,
+    pageSpeedScore: number | null,
+    internalLinks: number | null,
+    externalLinks: number | null,
     contentInfo: {
-        imagesCount: number,
-        imagesMissingAltTage: number
+        imagesCount: number | null,
+        imagesMissingAltTage: number | null
     },
     pageInfo: {
-        title: string,
-        titleLength: number,
-        metaDescription: string,
-        metaDescriptionLength: number,
-        https: boolean,
-        canonicalUrl: string
+        title: string | null,
+        titleLength: number | null,
+        metaDescription: string | null,
+        metaDescriptionLength: number | null,
+        https: boolean | null,
+        canonicalUrl: string | null
     },
     headingStructure: {
-        h1Tages: string[],
-        h2Tages: string[],
-        h3Tages: string[],
-        h4Tages: string[],
-        h5Tages: string[],
-        h6Tages: string[]
+        h1Tages: string[] | null,
+        h2Tages: string[] | null,
+        h3Tages: string[] | null,
+        h4Tages: string[] | null,
+        h5Tages: string[] | null,
+        h6Tages: string[] | null
     },
-    schemaMarkup: string[],
-    socialLinks: string[],
+    schemaMarkup: string[] | null,
+    socialLinks: string[] | null,
     openGraphTags: {
-        title: string,
-        description: string,
-        url: string,
-        type: string,
-        siteName: string
+        title: string | null,
+        description: string | null,
+        url: string | null,
+        type: string | null,
+        siteName: string | null
     },
-    summary: string,
-    fullSocialAnalysis: string
+    summary: string | null,
+    fullSocialAnalysis: string | null
 }
 
 interface SocialSWOTData {
-    analysisTitle: string,
-    followers: number,
-    following: number,
-    engagementRate: number,
+    analysisTitle: string | null,
+    followers: number | null,
+    following: number | null,
+    engagementRate: number | null,
     profileInfo: {
-      basicInfo: {
-        name: string,
-        bio: string,
-        verified: boolean,
-        private: boolean,
-        website: string
-      },
-      additionalMetrics: {
-        postsCount: number,
-        averageLikes: number,
-        averageComments: number,
-        EngagementPerPost: number
-      }
+        basicInfo: {
+            name: string | null,
+            bio: string | null,
+            verified: boolean | null,
+            private: boolean | null,
+            website: string | null
+        },
+        additionalMetrics: {
+            postsCount: number | null,
+            averageLikes: number | null,
+            averageComments: number | null,
+            EngagementPerPost: number | null
+        }
     },
-    topHashTags: HashtagData[], 
-    fullSocialAnalysis: string,
-    competitiveAnalysis: string[]
+    topHashTags: HashtagData[] | null, 
+    fullSocialAnalysis: string | null,
+    competitiveAnalysis: string[] | null
 }
 
 interface HashtagData {
@@ -219,21 +219,21 @@ interface HashtagData {
 }
 
 interface SentimentData {
-    analysisTitle: string,
-    competitorsAnalyzedNumber: number,
-    totalReview: number,
-    avgGoogleRating: number,
-    competitorsAnalyzed: CompetitorsAnalyzed[],
-    competitorsDetails: CompetitorsDetails[],
-    competitorSentimentComparisonChart: CompetitorSentimentComparisonChart[],
-    competitorRating_averageSentiment_chart: CompetitorsRatings[],
+    analysisTitle: string | null,
+    competitorsAnalyzedNumber: number | null,
+    totalReview: number | null,
+    avgGoogleRating: number | null,
+    competitorsAnalyzed: CompetitorsAnalyzed[] | null,
+    competitorsDetails: CompetitorsDetails[] | null,
+    competitorSentimentComparisonChart: CompetitorSentimentComparisonChart[] | null,
+    competitorRating_averageSentiment_chart: CompetitorsRatings[] | null,
     pieChart: {
-        title: string,
-        positive: number,
-        negative: number,
-        neutral: number
+        title: string | null,
+        positive: number | null,
+        negative: number | null,
+        neutral: number | null
     },
-    reviewsAnalyzedPerCompetitor: ReviewsPerCompetitor[]
+    reviewsAnalyzedPerCompetitor: ReviewsPerCompetitor[] | null
 }
 
 interface CompetitorsAnalyzed {
@@ -271,48 +271,48 @@ interface ReviewsPerCompetitor {
 
 interface BrandingAuditData {
     brandColors: {
-        dominanColor: string,
-        colors: string[]
+        dominanColor: string | null,
+        colors: string[] | null
     },
-    executiveSummary: string,
+    executiveSummary: string | null,
     overallBrandIdentity_firstImpression: {
-        strengths: string[],
-        roomForImprovement: string[]
+        strengths: string[] | null,
+        roomForImprovement: string[] | null
     },
     visualBrandingElements: {
         colorPalette: {
-            analysis: string,
-            recommendations: string[]
+            analysis: string | null,
+            recommendations: string[] | null
         },
         typography: {
-            analysis: string,
-            recommendations: string[]
+            analysis: string | null,
+            recommendations: string[] | null
         }
     },
     messaging_content_style: {
-        content: string,
-        recommendations: string[]
+        content: string | null,
+        recommendations: string[] | null
     },
     highlights_stories: {
-        analysis: string,
-        recommendations: string[]
+        analysis: string | null,
+        recommendations: string[] | null
     },
     gridStrategy: {
-        analysis: string,
-        recommendations: string[]
+        analysis: string | null,
+        recommendations: string[] | null
     },
-    scores: Scores[],
+    scores: Scores[] | null,
     websiteImage: {
-        data: string, // Placeholder for base64 data
-        mimeType: string
+        data: string | null, // Placeholder for base64 data
+        mimeType: string | null
     },
     instaImage: {
-        data: string, // Placeholder for base64 data
-        mimeType: string
+        data: string | null, // Placeholder for base64 data
+        mimeType: string | null
     },
     logoImage: {
-        data: string, // Placeholder for base64 data
-        mimeType: string
+        data: string | null, // Placeholder for base64 data
+        mimeType: string | null
     }
 }
 

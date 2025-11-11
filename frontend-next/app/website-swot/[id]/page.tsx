@@ -14,6 +14,8 @@ import CheckingUserCard from '@/components/CheckingUserCard';
 import { checkServiceLimitReached, deleteUserData, getUserData, getDataHistory, storeWebsiteAnalysisData } from '@/utilities/axiosRequester';
 import { AlertCircle } from 'lucide-react';
 import UserDataHistory from '@/components/UserDataHistory';
+import BoxSkeleton from '@/components/BoxSkeleton';
+import NormalSkeleton from '@/components/NormalSkeleton';
 
 
 interface Props {
@@ -83,7 +85,7 @@ const WebsiteSWOT = ({params} : Props) => {
             const decoder = new TextDecoder("utf-8");
             let buffer = "";
   
-            var finalData;
+            let finalData;
         
             while (true) {
               const { value, done } = await reader!.read();
@@ -156,36 +158,50 @@ const WebsiteSWOT = ({params} : Props) => {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8 justify-items-center">
-                    {/* Page Speed Score with Progress */}
-                    <CircularProgress
-                      value={data.pageSpeedScore}
-                      maxValue={100}
-                      size={140}
-                      strokeWidth={10}
-                      color="#f97316" // Orange color
-                      showProgress={true}
-                      label="Page Speed Score"
-                    />
                     
-                    {/* Internal Links - Full Circle */}
-                    <CircularProgress
-                      value={data.internalLinks}
-                      size={140}
-                      strokeWidth={10}
-                      color="#10b981" // Green color
-                      showProgress={false}
-                      label="Internal Links"
-                    />
+                    { 
+                      // Page Speed Score with Progress
+                      data.pageSpeedScore !== null ? 
+                      <CircularProgress
+                        value={data.pageSpeedScore}
+                        maxValue={100}
+                        size={140}
+                        strokeWidth={10}
+                        color="#f97316" // Orange color
+                        showProgress={true}
+                        label="Page Speed Score"
+                      /> :
+                      <BoxSkeleton/>
+                    }
+
+                    { 
+                      // Internal Links - Full Circle
+                      data.internalLinks !== null ? 
+                      <CircularProgress
+                        value={data.internalLinks}
+                        size={140}
+                        strokeWidth={10}
+                        color="#10b981" // Green color
+                        showProgress={false}
+                        label="Internal Links"
+                      /> :
+                      <BoxSkeleton/>
+                    }
                     
-                    {/* External Links - Full Circle */}
-                    <CircularProgress
-                      value={data.externalLinks}
-                      size={140}
-                      strokeWidth={10}
-                      color="#3b82f6" // Blue color
-                      showProgress={false}
-                      label="External Links"
-                    />
+                    { 
+                      // External Links - Full Circle
+                      data.externalLinks !== null ? 
+                      <CircularProgress
+                        value={data.externalLinks}
+                        size={140}
+                        strokeWidth={10}
+                        color="#3b82f6" // Blue color
+                        showProgress={false}
+                        label="External Links"
+                        /> :
+                        <BoxSkeleton/>
+                      }
+
                   </div>
                 </CardContent>
               </Card>
@@ -204,7 +220,10 @@ const WebsiteSWOT = ({params} : Props) => {
                     [&_pre]:rounded-xl
                     [&_pre]:p-4
                     [&_code]:break-words">
-                  <ReactMarkdown>{data.fullSocialAnalysis}</ReactMarkdown>
+                  {data.fullSocialAnalysis !== null ? 
+                    <ReactMarkdown>{data.fullSocialAnalysis}</ReactMarkdown> : 
+                    <NormalSkeleton count={5.5}/>
+                  }
                 </CardContent>
               </Card>
             </div>
@@ -217,11 +236,41 @@ const WebsiteSWOT = ({params} : Props) => {
                   <CardTitle className="text-3xl font-bold text-white mb-4 text-center">Page Details</CardTitle>
                 </CardHeader>
                 <CardContent className="text-gray-300 space-y-2">
-                  <p className='text-xl'><span className="font-semibold text-gray-300">Title:</span> <span className="text-blue-400">{data.pageInfo.title}</span> ({data.pageInfo.titleLength} chars)</p>
-                  <p className='text-xl'><span className="font-semibold text-gray-300">Meta Description:</span> <span className="text-blue-400">{data.pageInfo.metaDescription}</span> ({data.pageInfo.metaDescriptionLength} chars)</p>
-                  <p className='text-xl'><span className="font-semibold text-gray-300">HTTPS:</span> <span className={`${data.pageInfo.https ? "text-green-500" : "text-red-500"} font-bold`}>{data.pageInfo.https ? 'Yes' : 'No'}</span></p>
+                  <p className='text-xl'>
+                    <span className="me-2 font-semibold text-gray-300">Title:</span>
+                    {data.pageInfo.title !== null ?
+                      <span>
+                        <span className="me-2 text-blue-400">{data.pageInfo.title}</span>
+                        ({data.pageInfo.titleLength} chars)
+                      </span> :
+                      <NormalSkeleton width={"25%"}/>
+                    }
+                  </p>
+
+                  <p className='text-xl'>
+                    <span className="me-2 font-semibold text-gray-300">Meta Description:</span>
+                    {data.pageInfo.metaDescription !== null ?
+                      <span>
+                        <span className="me-2 text-blue-400">{data.pageInfo.metaDescription}</span> 
+                        ({data.pageInfo.metaDescriptionLength} chars)
+                      </span> :
+                      <NormalSkeleton width={"25%"}/> 
+                    }
+                  </p>
+
+                  <p className='text-xl'>
+                    <span className="me-2 font-semibold text-gray-300">HTTPS:</span>
+                    {data.pageInfo.metaDescription !== null ?
+                      <span className={`${data.pageInfo.https ? "text-green-500" : "text-red-500"} font-bold`}>{data.pageInfo.https ? 'Yes' : 'No'}</span> :
+                      <NormalSkeleton width={"25%"}/> 
+                    }
+                  </p>
+
                   <span className='me-2 font-semibold text-gray-300 text-xl'>Canonical URL:</span>
-                  <Link href={data.pageInfo.canonicalUrl} className='text-secondary hover:underline break-words text-xl'>{data.pageInfo.canonicalUrl}</Link>
+                  {data.pageInfo.canonicalUrl !== null ?
+                    <Link href={data.pageInfo.canonicalUrl} className='text-secondary hover:underline break-words text-xl'>{data.pageInfo.canonicalUrl}</Link> : 
+                    <NormalSkeleton width={"25%"}/>
+                  }
                 </CardContent>
               </Card>
             </div>
@@ -233,11 +282,43 @@ const WebsiteSWOT = ({params} : Props) => {
                   <CardTitle className="text-3xl font-bold text-white mb-4 text-center">Open Graph Tags</CardTitle>
                 </CardHeader>
                 <CardContent className="text-gray-300 space-y-2">
-                  <p className='text-xl'><span className="font-semibold text-gray-300">Title:</span> <span className="text-blue-400">{data.openGraphTags.title}</span></p>
-                  <p className='text-xl'><span className="font-semibold text-gray-300">Description:</span> <span className="text-blue-400">{data.openGraphTags.description}</span></p>
-                  <p className='text-xl'><span className="font-semibold text-gray-300">Type:</span> <span className="text-blue-400">{data.openGraphTags.type}</span></p>
-                  <p className='text-xl'><span className="font-semibold text-gray-300">Site Name:</span> <span className="text-blue-400">{data.openGraphTags.siteName}</span></p>
-                  <span className="font-semibold text-gray-300 text-xl ">URL:</span> <Link href={data.openGraphTags.url} className="text-secondary hover:underline text-xl break-words">{data.openGraphTags.url}</Link>
+                  <p className='text-xl'>
+                    <span className="me-2 font-semibold text-gray-300">Title:</span>
+                    {data.openGraphTags.title !== null ?
+                      <span className="text-blue-400">{data.openGraphTags.title}</span> :
+                      <NormalSkeleton width={"25%"}/>  
+                    }
+                  </p>
+                  
+                  <p className='text-xl'>
+                    <span className="me-2 font-semibold text-gray-300">Description:</span>
+                    {data.openGraphTags.description !== null ?
+                      <span className="text-blue-400">{data.openGraphTags.description}</span> :
+                      <NormalSkeleton width={"25%"}/>  
+                    }
+                  </p>
+                  
+                  <p className='text-xl'>
+                    <span className="me-2 font-semibold text-gray-300">Type:</span>
+                    {data.openGraphTags.type !== null ?
+                      <span className="text-blue-400">{data.openGraphTags.type}</span> :
+                      <NormalSkeleton width={"25%"}/>  
+                    }
+                  </p>
+                  
+                  <p className='text-xl'>
+                    <span className="me-2 font-semibold text-gray-300">Site Name:</span> 
+                    {data.openGraphTags.siteName !== null ?
+                      <span className="text-blue-400">{data.openGraphTags.siteName}</span> :
+                      <NormalSkeleton width={"25%"}/>  
+                    }
+                  </p>
+
+                  <span className="me-2 font-semibold text-gray-300 text-xl ">URL:</span> 
+                  {data.openGraphTags.url !== null ?
+                    <Link href={data.openGraphTags.url} className="text-secondary hover:underline text-xl break-words">{data.openGraphTags.url}</Link> :
+                    <NormalSkeleton width={"25%"}/>  
+                  }
                 </CardContent>
               </Card>
             </div>
@@ -250,8 +331,20 @@ const WebsiteSWOT = ({params} : Props) => {
                   <CardTitle className="text-3xl font-bold text-white mb-4 text-center">Content Overview</CardTitle>
                 </CardHeader>
                 <CardContent className="text-gray-300 space-y-2">
-                  <p className='text-xl'><span className="font-semibold text-gray-300">Images Count:</span> <span className="text-blue-400">{data.contentInfo.imagesCount}</span></p>
-                  <p className='text-xl'><span className="font-semibold text-gray-300">Images Missing Alt Tags:</span> <span className="text-red-400">{data.contentInfo.imagesMissingAltTage}</span></p>
+                  <p className='text-xl'>
+                    <span className="me-2 font-semibold text-gray-300">Images Count:</span> 
+                    {data.contentInfo.imagesCount !== null ? 
+                      <span className="text-blue-400">{data.contentInfo.imagesCount}</span> :
+                      <NormalSkeleton width={"10%"}/> 
+                    }
+                  </p>
+                  <p className='text-xl'>
+                    <span className="me-2 font-semibold text-gray-300">Images Missing Alt Tags:</span>
+                    {data.contentInfo.imagesMissingAltTage !== null ? 
+                      <span className="text-red-400">{data.contentInfo.imagesMissingAltTage}</span> :
+                      <NormalSkeleton width={"10%"}/> 
+                    }
+                  </p>
                 </CardContent>
               </Card>
             </div>
@@ -264,11 +357,14 @@ const WebsiteSWOT = ({params} : Props) => {
                 </CardHeader>
                 <CardContent className="text-gray-300 space-y-2">
                   <ul className='ms-5'>
-                    {data.socialLinks.map((link, index)=>(
+                  {data.socialLinks !== null ? 
+                    data.socialLinks.map((link, index)=>(
                         <li key={index} className='list-disc break-all overflow-hidden text-xl'>
                             <Link href={link} className='text-secondary hover:underline'><div className='bg-white inline-block w-1.5 h-1.5 rounded-4xl me-3'></div>{link}</Link>
                         </li>
-                    ))}
+                    )) : 
+                    <NormalSkeleton count={4}/>
+                  }
                   </ul>
                 </CardContent>
               </Card>
