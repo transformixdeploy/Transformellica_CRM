@@ -210,24 +210,28 @@ class GPTInsightsService:
             if static_template and variable_data:
                 # Split approach: cache the static template, send variable data separately
                 # This maximizes caching benefits
+                # For user messages with cache_control, content must be an array of content blocks
                 messages.append({
                     "role": "user",
-                    "content": static_template,
-                    "cache_control": {"type": "ephemeral"}  # Cache the static template
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": static_template,
+                            "cache_control": {"type": "ephemeral"}  # Cache the static template
+                        }
+                    ]
                 })
                 # Variable data is not cached (changes each request)
                 messages.append({
                     "role": "user",
-                    "content": variable_data
-                    # No cache_control - this data changes per request
+                    "content": variable_data  # Can be string or array, no cache_control
                 })
             else:
                 # Fallback: use full prompt (less optimal for caching but works)
-            messages.append({
-                "role": "user", 
-                "content": prompt
-                    # No cache_control - full prompt includes variable data
-            })
+                messages.append({
+                    "role": "user", 
+                    "content": prompt  # No cache_control - full prompt includes variable data
+                })
             
             # Get optimal token allocation
             optimal_tokens = self._get_optimal_max_tokens(operation)
@@ -1280,8 +1284,8 @@ class GPTInsightsService:
                 print(f"Fallback method successfully extracted {len(fallback_suggestions)} suggestions")
                 return fallback_suggestions
             else:
-                print("Fallback method failed, using mock suggestions")
-                return self._generate_mock_competitive_suggestions(social_data)
+                print("Fallback method failed, returning empty suggestions")
+                return []
     
     def _extract_suggestions_fallback(self, response: str) -> List[Dict[str, str]]:
         """Fallback method to extract suggestions from non-JSON response"""

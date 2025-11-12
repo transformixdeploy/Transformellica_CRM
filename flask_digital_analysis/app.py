@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify,Response
+from flask import Flask, request, jsonify, Response, stream_with_context
 from typing import Any, Dict
 import asyncio
 import base64
@@ -166,7 +166,14 @@ def website_swot_analysis():
             finally:
                 loop.close()
 
-        return Response(stream_response(), mimetype="text/event-stream")
+        response = Response(
+            stream_with_context(stream_response()),
+            mimetype="text/event-stream",
+        )
+        response.headers["Cache-Control"] = "no-cache"
+        response.headers["X-Accel-Buffering"] = "no"
+        response.headers["Connection"] = "keep-alive"
+        return response
 
     except Exception as e:
         return jsonify({"error": f"Failed to process request: {str(e)}"}), 500
@@ -303,7 +310,14 @@ def social_swot_analysis():
             finally:
                 loop.close()
 
-        return Response(stream_response(), mimetype="text/event-stream")
+        response = Response(
+            stream_with_context(stream_response()),
+            mimetype="text/event-stream",
+        )
+        response.headers["Cache-Control"] = "no-cache"
+        response.headers["X-Accel-Buffering"] = "no"
+        response.headers["Connection"] = "keep-alive"
+        return response
 
     except Exception as e:
         return jsonify({"error": f"Failed to process request: {str(e)}"}), 500
@@ -460,7 +474,14 @@ def branding_audit():
             ] or None
             yield "data: "+json.dumps(payload) + '\n\n'
 
-        return Response(stream_response(), mimetype="text/event-stream")
+        response = Response(
+            stream_with_context(stream_response()),
+            mimetype="text/event-stream",
+        )
+        response.headers["Cache-Control"] = "no-cache"
+        response.headers["X-Accel-Buffering"] = "no"
+        response.headers["Connection"] = "keep-alive"
+        return response
 
     except Exception as e:
         return jsonify({"error": f"Failed to process request: {str(e)}"}), 500
@@ -611,7 +632,14 @@ def customer_sentiment_analysis():
             payload["competitorsDetails"] = competitors_details
             yield "data: "+json.dumps(payload) + '\n\n'
 
-        return Response(stream_response(), mimetype="text/event-stream")
+        response = Response(
+            stream_with_context(stream_response()),
+            mimetype="text/event-stream",
+        )
+        response.headers["Cache-Control"] = "no-cache"
+        response.headers["X-Accel-Buffering"] = "no"
+        response.headers["Connection"] = "keep-alive"
+        return response
 
     except Exception as e:
         return jsonify({"error": f"Failed to process request: {str(e)}"}), 500

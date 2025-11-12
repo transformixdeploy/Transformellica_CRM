@@ -187,14 +187,36 @@ class TokenMonitor:
                     if "cache_control" in msg:
                         system_cache_control = msg["cache_control"]
                 else:
-                    # Build message with cache_control if present
-                    message_dict = {
-                        "role": msg["role"],
-                        "content": msg["content"]
-                    }
-                    # Add cache_control if present in the message (for user/assistant messages)
-                    if "cache_control" in msg:
-                        message_dict["cache_control"] = msg["cache_control"]
+                    # Build message - handle cache_control properly
+                    # If content is already an array (with cache_control in blocks), use it as-is
+                    # Otherwise, check if cache_control is at message level and restructure
+                    content = msg["content"]
+                    
+                    # Check if cache_control is at message level (old format)
+                    if "cache_control" in msg and not isinstance(content, list):
+                        # Restructure: content must be array of blocks with cache_control inside
+                        message_dict = {
+                            "role": msg["role"],
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": content,
+                                    "cache_control": msg["cache_control"]
+                                }
+                            ]
+                        }
+                    elif isinstance(content, list):
+                        # Content is already an array (new format), use as-is
+                        message_dict = {
+                            "role": msg["role"],
+                            "content": content
+                        }
+                    else:
+                        # Simple string content, no cache_control
+                        message_dict = {
+                            "role": msg["role"],
+                            "content": content
+                        }
                     anthropic_messages.append(message_dict)
             
             # Prepare API call parameters
