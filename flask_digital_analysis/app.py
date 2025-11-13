@@ -170,9 +170,10 @@ def website_swot_analysis():
             stream_with_context(stream_response()),
             mimetype="text/event-stream",
         )
-        response.headers["Cache-Control"] = "no-cache"
+        response.headers["Cache-Control"] = "no-cache, no-transform"
         response.headers["X-Accel-Buffering"] = "no"
         response.headers["Connection"] = "keep-alive"
+        response.headers["Transfer-Encoding"] = "chunked"
         return response
 
     except Exception as e:
@@ -314,9 +315,10 @@ def social_swot_analysis():
             stream_with_context(stream_response()),
             mimetype="text/event-stream",
         )
-        response.headers["Cache-Control"] = "no-cache"
+        response.headers["Cache-Control"] = "no-cache, no-transform"
         response.headers["X-Accel-Buffering"] = "no"
         response.headers["Connection"] = "keep-alive"
+        response.headers["Transfer-Encoding"] = "chunked"
         return response
 
     except Exception as e:
@@ -478,9 +480,10 @@ def branding_audit():
             stream_with_context(stream_response()),
             mimetype="text/event-stream",
         )
-        response.headers["Cache-Control"] = "no-cache"
+        response.headers["Cache-Control"] = "no-cache, no-transform"
         response.headers["X-Accel-Buffering"] = "no"
         response.headers["Connection"] = "keep-alive"
+        response.headers["Transfer-Encoding"] = "chunked"
         return response
 
     except Exception as e:
@@ -636,9 +639,10 @@ def customer_sentiment_analysis():
             stream_with_context(stream_response()),
             mimetype="text/event-stream",
         )
-        response.headers["Cache-Control"] = "no-cache"
+        response.headers["Cache-Control"] = "no-cache, no-transform"
         response.headers["X-Accel-Buffering"] = "no"
         response.headers["Connection"] = "keep-alive"
+        response.headers["Transfer-Encoding"] = "chunked"
         return response
 
     except Exception as e:
