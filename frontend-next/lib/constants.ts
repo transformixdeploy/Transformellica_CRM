@@ -291,20 +291,98 @@ BRAND_AUDIT: "brandAudit",
 CSV: "csv"
 }
 
+const historyTypes = {
+  limited: "Limited",
+  expanded: "Expanded"
+}
+
+const supportTypes = {
+  standard: "Standard",
+  priority: "Priority"
+}
+
+const planNames = {
+  freePlane: "Free plan",
+  explorer: "Explorer",
+  grower: "Grower",
+  salesGuru: "Sales Guru"
+}
+
+const planId = {
+  freePlane: "free_plan",
+  explorer: "explorer",
+  grower: "grower",
+  salesGuru: "sales_guru"
+}
+
+const plans = [
+  {
+    name: planNames.freePlane,
+    id: planId.freePlane,
+    bestFor: 'Invited users from the waitlist',
+    price: 'Free for a limited time',
+    reports: 4,
+    history: historyTypes.limited,
+    inviteOnly: true,
+  },
+  {
+    name: planNames.explorer,
+    id: planId.explorer,
+    bestFor: 'Freelancers & early users',
+    priceEGP: 299,
+    reports: 30,
+    history: historyTypes.limited,
+    extraReport: 10,
+    support: supportTypes.standard,
+    highlights: 'Entry-level plan to explore core AI modules. No CRM. Ideal for testing value.',
+  },
+  {
+    name: planNames.grower,
+    id: planId.grower,
+    bestFor: 'Marketing professionals',
+    priceEGP: 999,
+    reports: 200,
+    history: historyTypes.expanded,
+    modelMemory: true,
+    extraReport: 5,
+    support: supportTypes.priority,
+    highlights: 'Best value per report. Includes AI model memory & enhanced insights for campaigns.',
+    recommended: true,
+  },
+  {
+    name: planNames.salesGuru,
+    id: planId.salesGuru,
+    bestFor: 'Sales pro / SMEs',
+    priceEGP: 999,
+    reports: 100,
+    history: historyTypes.expanded,
+    modelMemory: true,
+    crm: true,
+    crmNote: '(5K-row limit, RFM disabled)',
+    extraReport: 5,
+    support: supportTypes.priority,
+    highlights: 'All modules + CRM access. Perfect for small teams managing customer data.',
+  },
+];
+
 export {
-crmDashboardData,
-websiteSWOTData,
-socialSWOTData,
-sentimentData,
-brandingAuditData,
-mainHowItWorksSteps,
-biHowItWorksSteps,
-containerAnimationVariants,
-itemAnimationVariants,
-crmSmartAnswerData,
-crmCardsData,
-crmPatternCardsData,
-crmPatternsData,
-axiosResponseStatus,
-userDataCategories
+  crmDashboardData,
+  websiteSWOTData,
+  socialSWOTData,
+  sentimentData,
+  brandingAuditData,
+  mainHowItWorksSteps,
+  biHowItWorksSteps,
+  containerAnimationVariants,
+  itemAnimationVariants,
+  crmSmartAnswerData,
+  crmCardsData,
+  crmPatternCardsData,
+  crmPatternsData,
+  axiosResponseStatus,
+  userDataCategories,
+  planId,
+  historyTypes,
+  supportTypes,
+  plans
 }

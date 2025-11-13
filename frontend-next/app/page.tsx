@@ -1,20 +1,22 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import HeroSection from '../components/HeroSection';
 import ValuePropositionSection from '../components/ValuePropositionSection';
 import BenefitsSection from '../components/BenefitsSection';
 import SocialProofSection from '../components/SocialProofSection';
-import CtaSection from '../components/CtaSection';
+import PricingPlan from '@/components/PricingPlan';
+import { AuthContext } from '@/context/AuthContext';
 
 const HomePage = () => {
   const [analysingWeb, setAnalysingWeb] = useState(false);
   const [analysingSocial, setAnalysingSocial] = useState(false);
   const [analysingBranding, setAnalysingBranding] = useState(false);
   const [analysingSentiment, setAnalysingSentiment] = useState(false);
-  
+
+  const {user, isAuthenticated, isLoading, accessToken} = useContext(AuthContext);
 
   if(analysingWeb){
     return (
@@ -83,7 +85,8 @@ const HomePage = () => {
         <ValuePropositionSection />
         <BenefitsSection />
         <SocialProofSection />
-        <CtaSection setWebAnalysing={setAnalysingWeb} setBrandingAnalysing={setAnalysingBranding} setSocialAnalysing={setAnalysingSocial} setSentimentAnalysing={setAnalysingSentiment}/>
+        {!isAuthenticated && <PricingPlan/>}
+        {/* <CtaSection setWebAnalysing={setAnalysingWeb} setBrandingAnalysing={setAnalysingBranding} setSocialAnalysing={setAnalysingSocial} setSentimentAnalysing={setAnalysingSentiment}/> */}
       </>
     );
   }

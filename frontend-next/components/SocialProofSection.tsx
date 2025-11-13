@@ -7,7 +7,7 @@ import { Users } from 'lucide-react';
 
 const SocialProofSection = () => {
   return (
-    <section className="py-16 sm:py-24 bg-background">
+    <section className="py-16 sm:py-24 bg-muted/20">
 
 
       <div className="container mx-auto px-4">
