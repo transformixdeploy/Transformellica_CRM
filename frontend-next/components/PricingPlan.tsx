@@ -154,16 +154,17 @@ export default function PricingPlan() {
               {/* CTA Button */}
               {isFree ? 
                 // This button 
-                <Button
-                  variant={'outline'}
-                  key={plan.name}
-                  onClick={()=>{}}
-                  className={clsx(
-                    'mt-auto w-full cursor-pointer border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300'
-                  )}
-                >
-                Join Waitlist
-                </Button> :
+                <Link href={"https://transformellica.thetransformix.com/auth"}>
+                  <Button
+                    variant={'outline'}
+                    key={plan.name}
+                    className={clsx(
+                      'mt-auto w-full cursor-pointer border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300'
+                    )}
+                  >
+                  Join Waitlist
+                  </Button> 
+                </Link> :
                 <Link href={`/checkout/${plan.id}`}>
                   <Button
                     variant={'default'}
